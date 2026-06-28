@@ -15,14 +15,15 @@ dependencies:
   #UI
   cupertino_icons: ^1.0.8
   flutter_easyloading: ^3.0.5
-  google_fonts: ^6.2.1
+  google_fonts: ^8.1.0
   flutter_svg: ^2.0.10+1
   gap:
   pattern_formatter: ^3.0.0
   loading_animation_widget: ^1.2.1
   like_button: ^2.0.5
   syncfusion_flutter_datepicker: ^25.2.3
-  better_player: ^0.0.83
+  video_player: ^2.8.6
+  chewie: ^1.8.5
   font_awesome_flutter:
 
 

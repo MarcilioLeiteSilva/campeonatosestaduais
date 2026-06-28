@@ -8,22 +8,39 @@ class WatchContentScreen extends StatefulWidget {
 }
 
 class _WatchContentScreenState extends State<WatchContentScreen> {
-  late BetterPlayerController _betterPlayerController;
+  late VideoPlayerController _videoPlayerController;
+  ChewieController? _chewieController;
+
   @override
   void initState() {
     super.initState();
-    BetterPlayerDataSource betterPlayerDataSource = BetterPlayerDataSource(
-        BetterPlayerDataSourceType.network,
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
-    _betterPlayerController = BetterPlayerController(
-      const BetterPlayerConfiguration(),
-      betterPlayerDataSource: betterPlayerDataSource,
+    _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
+    _videoPlayerController = VideoPlayerController.networkUrl(
+      Uri.parse("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"),
     );
+    try {
+      await _videoPlayerController.initialize();
+      _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController,
+        autoPlay: false,
+        looping: false,
+        aspectRatio: 16 / 9,
+      );
+    } catch (e) {
+      print("Erro ao inicializar player: $e");
+    }
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
-    _betterPlayerController.dispose();
+    _videoPlayerController.dispose();
+    _chewieController?.dispose();
     super.dispose();
   }
 
@@ -46,9 +63,14 @@ class _WatchContentScreenState extends State<WatchContentScreen> {
         children: [
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: BetterPlayer(
-              controller: _betterPlayerController,
-            ),
+            child: _chewieController != null &&
+                    _chewieController!.videoPlayerController.value.isInitialized
+                ? Chewie(
+                    controller: _chewieController!,
+                  )
+                : const Center(
+                    child: CircularProgressIndicator(),
+                  ),
           ),
           Expanded(
             child: ListView(
