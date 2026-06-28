@@ -32,8 +32,12 @@ class _EventsPageState extends State<EventsPage> {
             //TODO: Bar League
             CardBarMain(
               isDropped: _barDrop,
-              name: LeaguesApi.lLeaguesList[_selectedLeague].name,
-              logo: LeaguesApi.lLeaguesList[_selectedLeague].logo,
+              name: LeaguesApi.lLeaguesList.isNotEmpty
+                  ? LeaguesApi.lLeaguesList[_selectedLeague].name
+                  : 'Carregando...',
+              logo: LeaguesApi.lLeaguesList.isNotEmpty
+                  ? LeaguesApi.lLeaguesList[_selectedLeague].logo
+                  : '',
               onTap: () {
                 setState(() {
                   _barDrop = !_barDrop;

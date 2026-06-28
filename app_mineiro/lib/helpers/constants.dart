@@ -3,7 +3,8 @@ import 'package:intl/intl.dart';
 
 // TODO: Change App name
 const String kAppName = 'Mineirão Central';
-const String kPocketBaseUrl = 'https://zapscore-pocketbase.gtalg3.easypanel.host'; // Ajuste com o domínio real do seu Pocketbase no Easypanel
+const String kPocketBaseUrl = 'https://zapscore-pocketbase-mineiro.gtalg3.easypanel.host';
+
 
 
 ///DATE Format

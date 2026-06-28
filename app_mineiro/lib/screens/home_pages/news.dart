@@ -53,11 +53,17 @@ class _NewsPageState extends State<NewsPage> {
                         logoHome: EventsApi.eListEvents[i].logoHome,
                         nameAway: EventsApi.eListEvents[i].nameAway,
                         nameHome: EventsApi.eListEvents[i].nameHome,
-                        leagueName: LeaguesApi.lLeaguesList[i % LeaguesApi.lLeaguesList.length].name,
+                        leagueName: LeaguesApi.lLeaguesList.isNotEmpty
+                            ? LeaguesApi.lLeaguesList[i % LeaguesApi.lLeaguesList.length].name
+                            : '',
                         onTap: () {
                           //TODO: Open Events Details
                           Get.to(
-                            () => EventDetails(id: i, leagueId: i % LeaguesApi.lLeaguesList.length),
+                            () => EventDetails(
+                                id: i,
+                                leagueId: LeaguesApi.lLeaguesList.isNotEmpty
+                                    ? i % LeaguesApi.lLeaguesList.length
+                                    : 0),
                           );
                         },
                       ),

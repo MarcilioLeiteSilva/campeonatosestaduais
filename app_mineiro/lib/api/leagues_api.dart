@@ -2,18 +2,7 @@ import 'package:app_mineiro/models/leagues.dart';
 import 'package:app_mineiro/services/pocketbase_client.dart';
 
 class LeaguesApi {
-  static List<LeaguesModels> lLeaguesList = [
-    LeaguesModels(
-      id: 629,
-      name: 'Campeonato Mineiro - Módulo I',
-      logo: 'assets/images/leagues/premier.png',
-    ),
-    LeaguesModels(
-      id: 619,
-      name: 'Campeonato Mineiro - Módulo II',
-      logo: 'assets/images/leagues/laliga.png',
-    ),
-  ];
+  static List<LeaguesModels> lLeaguesList = [];
 
   static Future<void> loadFromPocketBase() async {
     try {

@@ -3,19 +3,7 @@ import 'package:app_mineiro/services/pocketbase_client.dart';
 import 'package:intl/intl.dart';
 
 class EventsApi {
-  static List<EventsModel> eListEvents = [
-    EventsModel(
-      id: '0',
-      logoAway: 'https://ssl.gstatic.com/onebox/media/sports/logos/pA81qH9E493b8uHhF0_N5w_48x48.png', // Cruzeiro
-      logoHome: 'https://ssl.gstatic.com/onebox/media/sports/logos/1_8wDdf6L1PqH79u9ZfS0g_48x48.png', // Atlético Mineiro
-      nameAway: 'Cruzeiro',
-      nameHome: 'Atlético Mineiro',
-      scoreAway: 2,
-      scoreHome: 2,
-      dateMatch: 'Hoje, 16:00',
-      timeMatch: '90+5',
-    ),
-  ];
+  static List<EventsModel> eListEvents = [];
 
   static Future<void> loadFromPocketBase() async {
     try {
