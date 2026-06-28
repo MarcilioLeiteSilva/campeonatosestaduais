@@ -22,6 +22,7 @@ class EventsApi {
       final pb = PocketBaseClient().client;
       final records = await pb.collection('fixtures').getFullList(
         sort: '-date',
+        expand: 'homeTeamId,awayTeamId',
       );
       if (records.isNotEmpty) {
         eListEvents = records.map((record) {
@@ -32,16 +33,26 @@ class EventsApi {
             formattedDate = DateFormat("dd/MM, HH:mm").format(dateTime);
           } catch (_) {}
 
+          final homeList = record.expand['homeTeamId'];
+          final homeTeamRecord = (homeList != null && homeList.isNotEmpty) ? homeList.first : null;
+          final nameHome = homeTeamRecord?.data['name'] ?? '';
+          final logoHome = homeTeamRecord?.data['logo'] ?? '';
+
+          final awayList = record.expand['awayTeamId'];
+          final awayTeamRecord = (awayList != null && awayList.isNotEmpty) ? awayList.first : null;
+          final nameAway = awayTeamRecord?.data['name'] ?? '';
+          final logoAway = awayTeamRecord?.data['logo'] ?? '';
+
           return EventsModel(
             id: record.id,
-            nameHome: record.data['homeTeamName'] ?? '',
-            nameAway: record.data['awayTeamName'] ?? '',
-            logoHome: record.data['homeTeamLogo'] ?? '',
-            logoAway: record.data['awayTeamLogo'] ?? '',
-            scoreHome: record.data['homeScore'] != null ? record.data['homeScore'] as int : null,
-            scoreAway: record.data['awayScore'] != null ? record.data['awayScore'] as int : null,
+            nameHome: nameHome,
+            nameAway: nameAway,
+            logoHome: logoHome,
+            logoAway: logoAway,
+            scoreHome: record.data['homeGoals'] != null ? (record.data['homeGoals'] as num).toInt() : null,
+            scoreAway: record.data['awayGoals'] != null ? (record.data['awayGoals'] as num).toInt() : null,
             dateMatch: formattedDate,
-            timeMatch: record.data['status'] ?? '',
+            timeMatch: record.data['statusShort'] ?? record.data['statusLong'] ?? '',
           );
         }).toList();
       }
@@ -49,5 +60,6 @@ class EventsApi {
       print("Erro ao carregar partidas do PocketBase: $e");
     }
   }
+
 }
 
