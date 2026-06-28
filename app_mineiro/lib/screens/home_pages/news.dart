@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'package:app_mineiro/api/events_api.dart';
 import 'package:app_mineiro/api/leagues_api.dart';
 import 'package:app_mineiro/api/news_api.dart';
+
 
 import 'package:app_mineiro/localizations/localization_constants.dart';
 import 'package:app_mineiro/screens/details/events_details.dart';
@@ -40,7 +42,7 @@ class _NewsPageState extends State<NewsPage> {
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 5.0),
                 children: [
-                  for (int i = 0; i < 4; i++)
+                  for (int i = 0; i < math.min(4, EventsApi.eListEvents.length); i++)
                     ShakeListTransition(
                       duration: Duration(milliseconds: (i + 3) * 300),
                       axis: Axis.horizontal,
@@ -77,7 +79,7 @@ class _NewsPageState extends State<NewsPage> {
                 },
                 scrollDirection: Axis.horizontal,
                 children: [
-                  for (int i = 0; i < 3; i++)
+                  for (int i = 0; i < math.min(3, NewsApi.aListNews.length); i++)
                     ShakeTransition(
                       duration: Duration(milliseconds: 1600),
                       axis: Axis.horizontal,
@@ -106,7 +108,7 @@ class _NewsPageState extends State<NewsPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < math.min(3, NewsApi.aListNews.length); i++)
                   ShakeTransition(
                     duration: Duration(milliseconds: 1600),
                     child: AnimatedContainer(
