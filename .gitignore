@@ -1,0 +1,24 @@
+# Logs e schemas temporários
+collections_schema.txt
+collections_schema_pretty.json
+
+# Node.js (zapscore_sync)
+zapscore_sync/node_modules/
+zapscore_sync/.env
+zapscore_sync/.env*.local
+
+# Flutter (app_mineiro)
+app_mineiro/.dart_tool/
+app_mineiro/build/
+app_mineiro/.flutter-plugins
+app_mineiro/.flutter-plugins-dependencies
+app_mineiro/.pub-cache/
+app_mineiro/.packages
+
+# SO e Editores
+.DS_Store
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws

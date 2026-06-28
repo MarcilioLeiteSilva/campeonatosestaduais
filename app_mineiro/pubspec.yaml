@@ -1,0 +1,50 @@
+name: azul_football
+description: A new Flutter application.
+
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  font_awesome_flutter: ^10.8.0
+  google_fonts: any
+  supercharged: ^2.1.1
+
+  readmore: ^3.0.0
+  flutter_svg: ^2.1.0
+  flutter_html: any
+
+  intl: any
+  get: ^4.7.2
+  provider: ^6.1.5
+  pocketbase: ^0.18.0
+
+  image_picker: ^1.1.2
+  url_launcher: ^6.3.1
+
+  jumping_bottom_nav_bar:
+    path: packages/jumping_bottom_nav_bar
+
+dependency_overrides:
+  win32: ^5.5.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/languages/
+    - assets/images/leagues/

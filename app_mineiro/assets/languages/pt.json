@@ -1,0 +1,64 @@
+{
+  "welcome_app": "Bem-vindo ao Mineirão Central",
+  "welcome_app_2": "O portal de notícias e jogos do Futebol Mineiro!\nAcompanhe tudo sobre o Campeonato Mineiro Módulo I e Módulo II.",
+  "get_started": "começar",
+
+  "getting_started": "Criar Conta",
+  "create_account": "Crie uma conta para acompanhar seu time!",
+  "username": "Nome de usuário",
+  "email": "E-mail",
+  "already_have_account": "Já possui uma conta? ",
+  "signin": "Entrar",
+  "signup_with": "Cadastrar-se com",
+
+  "signin_1": "Faça seu Login",
+  "signin_2": "Bem-vindo de volta! Sentimos sua falta",
+  "dont_have_account": "Não possui uma conta? ",
+  "rest_pass": "Recuperar Senha",
+  "login_with": "Entrar com",
+
+  "help": "Não se preocupe! Nós te ajudamos",
+  "send_pass": "enviar senha",
+
+  "save": "SALVAR",
+  "popular_clubs": "Escolha seus Times",
+  "popular_clubs_2": "Selecione pelo menos 5 times mineiros para seguir de perto",
+  "search_club": "buscar time...",
+
+  "live": "Ao Vivo",
+  "latest_stories": "Últimas Notícias",
+  "recent_news": "Notícias Recentes",
+
+  "chats": "Chat da Torcida",
+  "match_stats": "Estatísticas",
+  "lineup": "Escalações",
+  "commentary": "Lances",
+
+  "full_time": "Fim de Jogo",
+  "goals": "Gols",
+  "possession": "Posse de Bola",
+  "total_shots": "Finalizações",
+  "shots_target": "Chutes no Gol",
+  "yel_cards": "Cartões Amarelos",
+  "red_cards": "Cartões Vermelhos",
+  "tackels": "Desarmes",
+  "most_rated": "CRAQUE DO JOGO",
+  "subs": "Substituições",
+  "bench": "Banco",
+  "favor_clubs": "Times Favoritos",
+
+  "joined": "Membro desde\n",
+  "mon_ago": "meses",
+  "language": "Idioma / Language",
+  "privacy": "Política de Privacidade",
+  "rate_app": "Avaliar App",
+  "share_app": "Compartilhar App",
+  "twitter": "Twitter",
+  "facebook": "Facebook",
+  "instagram": "Instagram",
+  "logout": "Sair da Conta",
+
+  "first_name": "Torcedor",
+  "secend_name": "Gerais",
+  "signup": "Cadastrar-se"
+}
