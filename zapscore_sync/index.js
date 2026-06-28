@@ -191,13 +191,9 @@ async function syncFixtures(leagueId, season = 2026) {
     const response = await axios.get(`${zapscoreUrl}/fixtures?leagueId=${leagueId}&season=${season}`);
     const fixtures = response.data;
 
-    // Buscar a competição correspondente no Pocketbase para associar
-    let competitionRecord = null;
-    try {
-      competitionRecord = await pb.collection('competitions').getFirstListItem(`externalId = ${leagueId}`);
-    } catch (e) {
-      console.log(`Aviso: Competição com externalId = ${leagueId} não encontrada no Pocketbase.`);
-    }
+    // Cache de competições e times em memória para resolver relações
+    const competitionsRecords = await pb.collection('competitions').getFullList();
+    const teamsRecords = await pb.collection('teams').getFullList();
 
     for (const f of fixtures) {
       let existingRecord = null;
@@ -207,50 +203,70 @@ async function syncFixtures(leagueId, season = 2026) {
         // Record não existe
       }
 
-      const homeTeam = f.teams?.home || {};
-      const awayTeam = f.teams?.away || {};
-      const goals = f.goals || {};
-      const fixtureInfo = f.fixture || {};
+      const competitionRecord = competitionsRecords.find(r => r.externalId === leagueId || r.externalId === f.leagueId);
+      
+      const extHomeId = f.homeTeam?.externalId || f.homeTeamId;
+      const extAwayId = f.awayTeam?.externalId || f.awayTeamId;
+
+      const homeRecord = teamsRecords.find(r => r.externalId === extHomeId);
+      const awayRecord = teamsRecords.find(r => r.externalId === extAwayId);
+
+      if (!competitionRecord) {
+        console.log(`Aviso: Competição com externalId = ${leagueId} não encontrada no Pocketbase. Pulando partida.`);
+        continue;
+      }
+
+      if (!homeRecord || !awayRecord) {
+        console.log(`Aviso: Times [Home: ${extHomeId}, Away: ${extAwayId}] não encontrados no Pocketbase. Pulando partida.`);
+        continue;
+      }
 
       const data = {
-        externalId: f.externalId || fixtureInfo.id,
-        leagueId: leagueId,
-        competitionId: competitionRecord ? competitionRecord.id : null,
-        round: leagueId === 629 ? 'Módulo I' : 'Módulo II', // Ou f.league?.round
-        date: fixtureInfo.date || f.date,
-        status: fixtureInfo.status?.short || f.status || 'NS',
-        homeTeamId: homeTeam.id || homeTeam.externalId,
-        homeTeamName: homeTeam.name,
-        homeTeamLogo: homeTeam.logo,
-        homeScore: goals.home !== null ? goals.home : null,
-        awayTeamId: awayTeam.id || awayTeam.externalId,
-        awayTeamName: awayTeam.name,
-        awayTeamLogo: awayTeam.logo,
-        awayScore: goals.away !== null ? goals.away : null,
-        season: season
+        externalId: f.externalId,
+        leagueId: competitionRecord.id, // ID da relação no Pocketbase
+        season: f.season || season,
+        date: f.date,
+        round: f.round || '',
+        statusLong: f.statusLong || '',
+        statusShort: f.statusShort || '',
+        elapsed: f.elapsed !== null ? f.elapsed : null,
+        venueName: f.venueName || '',
+        venueCity: f.venueCity || '',
+        homeTeamId: homeRecord.id, // ID da relação no Pocketbase
+        awayTeamId: awayRecord.id, // ID da relação no Pocketbase
+        homeGoals: f.homeGoals !== null ? f.homeGoals : null,
+        awayGoals: f.awayGoals !== null ? f.awayGoals : null,
+        oddsHome: f.oddsHome !== null ? f.oddsHome : null,
+        oddsDraw: f.oddsDraw !== null ? f.oddsDraw : null,
+        oddsAway: f.oddsAway !== null ? f.oddsAway : null
       };
 
       let pbFixtureId = null;
 
-      if (existingRecord) {
-        const updated = await pb.collection('fixtures').update(existingRecord.id, data);
-        pbFixtureId = updated.id;
-      } else {
-        const created = await pb.collection('fixtures').create(data);
-        pbFixtureId = created.id;
-        console.log(`Partida [${homeTeam.name} vs ${awayTeam.name}] criada.`);
+      try {
+        if (existingRecord) {
+          const updated = await pb.collection('fixtures').update(existingRecord.id, data);
+          pbFixtureId = updated.id;
+        } else {
+          const created = await pb.collection('fixtures').create(data);
+          pbFixtureId = created.id;
+          console.log(`Partida [${homeRecord.name} vs ${awayRecord.name}] criada.`);
+        }
+      } catch (err) {
+        console.error(`Erro ao salvar partida ID=${f.externalId}:`, err.message, JSON.stringify(err.data));
+        continue;
       }
 
-      // Sincronizar estatísticas, escalações e eventos se houver dados na resposta
-      // Para manter o script rápido, podemos fazer o detalhamento apenas de partidas de hoje ou recentes
+      // Sincronizar eventos se houver dados
       if (f.events && f.events.length > 0 && pbFixtureId) {
-        await syncFixtureEvents(pbFixtureId, f.events, homeTeam.id, awayTeam.id);
+        await syncFixtureEvents(pbFixtureId, f.events, extHomeId, extAwayId);
       }
     }
   } catch (error) {
     console.error(`Erro ao sincronizar partidas da liga ${leagueId}:`, error.message);
   }
 }
+
 
 /**
  * Sincroniza eventos de uma partida
