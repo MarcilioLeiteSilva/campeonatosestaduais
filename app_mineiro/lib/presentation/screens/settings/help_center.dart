@@ -68,7 +68,7 @@ class ContactItem extends StatelessWidget {
   const ContactItem(
       {super.key, required this.label, required this.icon, this.onTap});
   final String label;
-  final IconData icon;
+  final dynamic icon;
   final Function()? onTap;
 
   @override
@@ -90,7 +90,7 @@ class ContactItem extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Icon(
+              FaIcon(
                 icon,
                 color: AppColor.primary,
               ),
