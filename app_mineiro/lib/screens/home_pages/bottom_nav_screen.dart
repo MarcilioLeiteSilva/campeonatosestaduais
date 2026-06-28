@@ -33,9 +33,9 @@ class _BottomNavScreenState extends State<BottomNavScreen>
     if (_indexPage == widget.indexPage) {
       return widget.screen != null
           ? widget.screen
-          : _listPages[(_indexPage - 1)];
+          : _listPages[_indexPage];
     } else {
-      return _listPages[(_indexPage - 1)];
+      return _listPages[_indexPage];
     }
   }
 
@@ -43,7 +43,7 @@ class _BottomNavScreenState extends State<BottomNavScreen>
   void initState() {
     _tabController = TabController(length: 4, vsync: this);
 
-    widget.indexPage != null ? _indexPage = widget.indexPage! : _indexPage = 1;
+    widget.indexPage != null ? _indexPage = widget.indexPage! : _indexPage = 0;
     super.initState();
   }
 
@@ -104,7 +104,7 @@ class _BottomNavScreenState extends State<BottomNavScreen>
                   items: [
                     TabItemIcon(
                       buildWidget: (_, color) => TabBottomMain(
-                        isSelected: _indexPage == 1,
+                        isSelected: _indexPage == 0,
                         icon: FontAwesomeIcons.home,
                       ),
                       startColor: theme.colorScheme.surface,
@@ -113,7 +113,7 @@ class _BottomNavScreenState extends State<BottomNavScreen>
                     ),
                     TabItemIcon(
                       buildWidget: (_, color) => TabBottomMain(
-                        isSelected: _indexPage == 2,
+                        isSelected: _indexPage == 1,
                         icon: FontAwesomeIcons.futbol,
                       ),
                       startColor: theme.colorScheme.surface,
@@ -122,7 +122,7 @@ class _BottomNavScreenState extends State<BottomNavScreen>
                     ),
                     TabItemIcon(
                       buildWidget: (_, color) => TabBottomMain(
-                        isSelected: _indexPage == 3,
+                        isSelected: _indexPage == 2,
                         icon: FontAwesomeIcons.heart,
                       ),
                       startColor: theme.colorScheme.surface,
@@ -131,7 +131,7 @@ class _BottomNavScreenState extends State<BottomNavScreen>
                     ),
                     TabItemIcon(
                       buildWidget: (_, color) => TabBottomMain(
-                        isSelected: _indexPage == 4,
+                        isSelected: _indexPage == 3,
                         icon: FontAwesomeIcons.cog,
                       ),
                       startColor: theme.colorScheme.surface,

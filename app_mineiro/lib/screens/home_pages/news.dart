@@ -92,7 +92,7 @@ class _NewsPageState extends State<NewsPage> {
                               screen: NewsDetails(
                                 id: i,
                               ),
-                              indexPage: 1,
+                              indexPage: 0,
                             ),
                             transition: Transition.fadeIn,
                           );
@@ -169,7 +169,7 @@ class _NewsPageState extends State<NewsPage> {
                               screen: NewsDetails(
                                 id: i,
                               ),
-                              indexPage: 1,
+                              indexPage: 0,
                             ),
                             transition: Transition.fadeIn,
                           );
