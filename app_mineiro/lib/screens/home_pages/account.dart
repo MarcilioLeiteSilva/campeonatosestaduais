@@ -1,10 +1,10 @@
 import 'dart:io';
 
-import 'package:azul_football/helpers/functions.dart';
-import 'package:azul_football/localizations/localization_constants.dart';
-import 'package:azul_football/providers/theme_provider.dart';
-import 'package:azul_football/widgets/trensations_widgets.dart';
-import 'package:azul_football/widgets/widgets_settings.dart';
+import 'package:app_mineiro/helpers/functions.dart';
+import 'package:app_mineiro/localizations/localization_constants.dart';
+import 'package:app_mineiro/providers/theme_provider.dart';
+import 'package:app_mineiro/widgets/trensations_widgets.dart';
+import 'package:app_mineiro/widgets/widgets_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';

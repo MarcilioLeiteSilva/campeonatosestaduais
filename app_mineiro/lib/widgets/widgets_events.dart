@@ -1,4 +1,4 @@
-import 'package:azul_football/api/events_api.dart';
+import 'package:app_mineiro/api/events_api.dart';
 
 import 'package:flutter/material.dart';
 

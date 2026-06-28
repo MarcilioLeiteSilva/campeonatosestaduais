@@ -1,12 +1,12 @@
-import 'package:azul_football/api/events_api.dart';
-import 'package:azul_football/api/leagues_api.dart';
+import 'package:app_mineiro/api/events_api.dart';
+import 'package:app_mineiro/api/leagues_api.dart';
 
-import 'package:azul_football/localizations/localization_constants.dart';
-import 'package:azul_football/screens/details/events/chats.dart';
-import 'package:azul_football/screens/details/events/commentary.dart';
-import 'package:azul_football/screens/details/events/lineup.dart';
-import 'package:azul_football/screens/details/events/stats.dart';
-import 'package:azul_football/widgets/widgets_events.dart';
+import 'package:app_mineiro/localizations/localization_constants.dart';
+import 'package:app_mineiro/screens/details/events/chats.dart';
+import 'package:app_mineiro/screens/details/events/commentary.dart';
+import 'package:app_mineiro/screens/details/events/lineup.dart';
+import 'package:app_mineiro/screens/details/events/stats.dart';
+import 'package:app_mineiro/widgets/widgets_events.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 

@@ -1,5 +1,5 @@
-import 'package:azul_football/models/leagues.dart';
-import 'package:azul_football/services/pocketbase_client.dart';
+import 'package:app_mineiro/models/leagues.dart';
+import 'package:app_mineiro/services/pocketbase_client.dart';
 
 class LeaguesApi {
   static List<LeaguesModels> lLeaguesList = [

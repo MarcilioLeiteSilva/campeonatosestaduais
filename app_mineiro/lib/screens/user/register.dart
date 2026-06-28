@@ -1,7 +1,7 @@
-import 'package:azul_football/localizations/localization_constants.dart';
-import 'package:azul_football/screens/favorites/favorites_clubs.dart';
-import 'package:azul_football/widgets/trensations_widgets.dart';
-import 'package:azul_football/widgets/widgets_user.dart';
+import 'package:app_mineiro/localizations/localization_constants.dart';
+import 'package:app_mineiro/screens/favorites/favorites_clubs.dart';
+import 'package:app_mineiro/widgets/trensations_widgets.dart';
+import 'package:app_mineiro/widgets/widgets_user.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';

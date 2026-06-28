@@ -1,5 +1,5 @@
 import 'package:pocketbase/pocketbase.dart';
-import 'package:azul_football/helpers/constants.dart';
+import 'package:app_mineiro/helpers/constants.dart';
 
 class PocketBaseClient {
   static final PocketBaseClient _instance = PocketBaseClient._internal();

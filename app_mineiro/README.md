@@ -1,4 +1,4 @@
-# azul_football
+# app_mineiro
 
 A new Flutter application.
 

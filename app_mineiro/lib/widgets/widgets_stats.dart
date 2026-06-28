@@ -1,7 +1,7 @@
-import 'package:azul_football/api/players_api.dart';
-import 'package:azul_football/helpers/colors.dart';
+import 'package:app_mineiro/api/players_api.dart';
+import 'package:app_mineiro/helpers/colors.dart';
 
-import 'package:azul_football/localizations/localization_constants.dart';
+import 'package:app_mineiro/localizations/localization_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 

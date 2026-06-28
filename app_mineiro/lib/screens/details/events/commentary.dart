@@ -1,7 +1,7 @@
-import 'package:azul_football/helpers/colors.dart';
-import 'package:azul_football/helpers/constants.dart';
-import 'package:azul_football/widgets/trensations_widgets.dart';
-import 'package:azul_football/widgets/widgets_stats.dart';
+import 'package:app_mineiro/helpers/colors.dart';
+import 'package:app_mineiro/helpers/constants.dart';
+import 'package:app_mineiro/widgets/trensations_widgets.dart';
+import 'package:app_mineiro/widgets/widgets_stats.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 

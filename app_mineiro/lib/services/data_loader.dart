@@ -1,7 +1,7 @@
-import 'package:azul_football/api/leagues_api.dart';
-import 'package:azul_football/api/clubs_api.dart';
-import 'package:azul_football/api/events_api.dart';
-import 'package:azul_football/api/news_api.dart';
+import 'package:app_mineiro/api/leagues_api.dart';
+import 'package:app_mineiro/api/clubs_api.dart';
+import 'package:app_mineiro/api/events_api.dart';
+import 'package:app_mineiro/api/news_api.dart';
 
 class DataLoader {
   static Future<void> loadAllData() async {

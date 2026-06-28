@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:azul_football/services/data_loader.dart';
+import 'package:app_mineiro/services/data_loader.dart';
 
 class SplashScreen extends StatefulWidget {
   @override

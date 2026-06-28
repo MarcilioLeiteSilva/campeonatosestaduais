@@ -1,4 +1,4 @@
-import 'package:azul_football/models/players.dart';
+import 'package:app_mineiro/models/players.dart';
 
 class PlayersApi {
   static List<PlayersModels> pListPlayers = [

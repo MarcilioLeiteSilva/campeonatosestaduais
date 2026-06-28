@@ -1,4 +1,4 @@
-import 'package:azul_football/models/chats.dart';
+import 'package:app_mineiro/models/chats.dart';
 
 class ChatApi {
   static List<ChatsModel> cListChat = [

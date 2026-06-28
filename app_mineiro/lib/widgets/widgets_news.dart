@@ -1,4 +1,4 @@
-import 'package:azul_football/localizations/localization_constants.dart';
+import 'package:app_mineiro/localizations/localization_constants.dart';
 
 import 'package:flutter/material.dart';
 

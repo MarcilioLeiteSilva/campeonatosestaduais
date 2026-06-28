@@ -1,6 +1,6 @@
-import 'package:azul_football/localizations/localization_constants.dart';
-import 'package:azul_football/widgets/trensations_widgets.dart';
-import 'package:azul_football/widgets/widgets_stats.dart';
+import 'package:app_mineiro/localizations/localization_constants.dart';
+import 'package:app_mineiro/widgets/trensations_widgets.dart';
+import 'package:app_mineiro/widgets/widgets_stats.dart';
 import 'package:flutter/material.dart';
 
 class MatchStatsPage extends StatefulWidget {

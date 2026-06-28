@@ -1,5 +1,5 @@
-import 'package:azul_football/models/teams.dart';
-import 'package:azul_football/services/pocketbase_client.dart';
+import 'package:app_mineiro/models/teams.dart';
+import 'package:app_mineiro/services/pocketbase_client.dart';
 
 class ClubsApi {
   static List<TeamsModel> cListClubs = [
