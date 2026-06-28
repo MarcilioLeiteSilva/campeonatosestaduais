@@ -22,13 +22,25 @@ pb.autoCancellation(false);
 async function authenticate() {
   console.log(`Conectando ao PocketBase em: ${pbUrl}`);
   try {
-    await pb.admins.authWithPassword(pbAdminEmail, pbAdminPassword);
-    console.log("Autenticado com sucesso como Administrador no PocketBase!");
+    // Tenta primeiro o método do Pocketbase v0.23+ (Superusers)
+    try {
+      await pb.collection('_superusers').authWithPassword(pbAdminEmail, pbAdminPassword);
+      console.log("Autenticado com sucesso como Superuser no PocketBase!");
+    } catch (e) {
+      // Se retornar 404, tenta o método de administração legado (v0.22 ou inferior)
+      if (e.status === 404 || (e.message && e.message.includes('not found'))) {
+        await pb.admins.authWithPassword(pbAdminEmail, pbAdminPassword);
+        console.log("Autenticado com sucesso como Administrador (legado) no PocketBase!");
+      } else {
+        throw e;
+      }
+    }
   } catch (error) {
     console.error("Erro na autenticação do PocketBase:", error.message);
     throw error;
   }
 }
+
 
 /**
  * Garante que as coleções secundárias ou ausentes no schema inicial existam
