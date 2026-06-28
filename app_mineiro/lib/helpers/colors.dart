@@ -1,29 +1,17 @@
-import 'package:flutter/material.dart';
+part of 'helpers.dart';
 
-// Mineirão Central Colors (Crimson Red, Gold/Yellow, Charcoal Dark Mode)
-Color kPrimaryLightColor = const Color(0xffd32f2f); // Vibrant Crimson Red
-Color kPrimaryDarkColor = const Color(0xff8e0000);  // Deep Dark Red
+abstract class AppColor {
+  static const Color primary = Color(0xffE80F88);
+  static const Color primaryDark = Color(0xff4C0033);
 
-// Background Color
-Color kBackgroundLightColor = const Color(0xfffafafa);
-Color kBackgroundDarkColor = const Color(0xff121212);
+  static const Color background = Color(0xff181A1F);
+  static const Color card = Color(0xFF1E222A);
+  static const Color cardDark = Color(0xFF212121);
 
-// Card Color
-Color kCardLightColor = const Color(0xffffffff);
-Color kCardDarkColor = const Color(0xff1e1e1e);
+  static const Color info = Color(0xff34383F);
+  static const Color hint = Color(0xff757575);
 
-// Unselected Color
-Color kUnselectedLightColor = const Color(0xffc5cee0);
-Color kUnselectedDarkColor = const Color(0xff888888);
+  static const Color logout = Color(0xFFF75555);
 
-// Error Color
-Color kErrorLightColor = const Color(0xffb00020);
-Color kErrorDarkColor = const Color(0xffcf6679);
-
-// Font Color
-Color kFontPrimaryLightColor = const Color(0xff1a1a1a);
-Color kFontSecondaryLightColor = const Color(0xff757575);
-Color kFontPrimaryDarkColor = const Color(0xffdedede);
-Color kFontSecondaryDarkColor = const Color(0xff9e9e9e);
-
-Color kYellow01 = const Color(0xffffd700); // Gold Accent
+  static Color dialogBack = const Color(0xff09101D).withOpacity(.7);
+}

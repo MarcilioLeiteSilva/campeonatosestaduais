@@ -8,6 +8,7 @@ class EventsModel {
   final scoreAway;
   final dateMatch;
   final timeMatch;
+  final int leagueExternalId;
 
   EventsModel({
     this.id,
@@ -19,5 +20,6 @@ class EventsModel {
     this.scoreAway,
     this.dateMatch,
     this.timeMatch,
+    this.leagueExternalId = -1,
   });
 }

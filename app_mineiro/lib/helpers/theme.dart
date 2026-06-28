@@ -1,157 +1,164 @@
-// Light Mode
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+part of 'helpers.dart';
 
-import 'colors.dart';
+abstract class AppTheme {
+  static ThemeData darTheme(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
 
-ThemeData themeData(BuildContext context) {
-  return ThemeData(
-    appBarTheme: AppBarTheme(color: Colors.transparent, elevation: 0),
-    primaryColor: kPrimaryLightColor,
-    primaryColorDark: kPrimaryDarkColor,
-    hintColor: kFontSecondaryLightColor,
-    cardColor: kCardLightColor,
-    brightness: Brightness.light,
-    textSelectionTheme: TextSelectionThemeData(cursorColor: kPrimaryLightColor),
-    unselectedWidgetColor: kUnselectedLightColor,
-    scaffoldBackgroundColor: kBackgroundLightColor,
-    iconTheme: IconThemeData(color: kBackgroundDarkColor),
-    primaryIconTheme: IconThemeData(color: kBackgroundDarkColor),
-    visualDensity: VisualDensity.adaptivePlatformDensity,
-    indicatorColor: kPrimaryLightColor,
-    buttonTheme: ButtonThemeData(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(50.0),
+    return ThemeData.dark(
+      useMaterial3: true,
+    ).copyWith(
+      brightness: Brightness.dark,
+      colorScheme: _getColorScheme(AppColor.primary),
+      scaffoldBackgroundColor: AppColor.background,
+      dividerTheme: const DividerThemeData(color: AppColor.info),
+      searchBarTheme: SearchBarThemeData(
+        backgroundColor: const MaterialStatePropertyAll(AppColor.card),
+        surfaceTintColor: const MaterialStatePropertyAll(AppColor.card),
+        textStyle: MaterialStatePropertyAll(
+          GoogleFonts.urbanist(
+            textStyle: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+        ),
+        hintStyle: MaterialStatePropertyAll(
+          GoogleFonts.urbanist(
+            textStyle: const TextStyle(
+              color: AppColor.hint,
+              fontWeight: FontWeight.normal,
+              fontSize: 15,
+            ),
+          ),
+        ),
+        shape: MaterialStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
       ),
-    ),
-    textTheme: GoogleFonts.poppinsTextTheme().copyWith(
-      displayLarge: GoogleFonts.poppins(
-        color: kFontPrimaryLightColor,
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
+      appBarTheme: AppBarTheme(
+        surfaceTintColor: AppColor.background,
+        backgroundColor: AppColor.background,
+        titleTextStyle: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
+        ),
       ),
-      displayMedium: GoogleFonts.poppins(
-        color: kFontPrimaryLightColor,
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
+      inputDecorationTheme: InputDecorationTheme(
+        hintStyle: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: AppColor.hint,
+            fontWeight: FontWeight.normal,
+            fontSize: 15,
+          ),
+        ),
+        border: UnderlineInputBorder(
+          borderRadius: BorderRadius.circular(5),
+          borderSide: const BorderSide(
+            color: AppColor.primary,
+          ),
+        ),
       ),
-      displaySmall: GoogleFonts.poppins(
-        color: kFontPrimaryLightColor,
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
+      textTheme: GoogleFonts.urbanistTextTheme(textTheme).copyWith(
+        labelLarge: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.normal,
+            fontSize: 20,
+          ),
+        ),
+        labelMedium: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.normal,
+            fontSize: 18,
+          ),
+        ),
+        labelSmall: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.normal,
+            fontSize: 15,
+          ),
+        ),
+        bodyLarge: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 24,
+          ),
+        ),
+        bodyMedium: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+          ),
+        ),
+        bodySmall: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        headlineLarge: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 28,
+          ),
+        ),
+        headlineMedium: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 26,
+          ),
+        ),
+        headlineSmall: GoogleFonts.urbanist(
+          textStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
       ),
-      headlineMedium: GoogleFonts.poppins(
-        color: kFontPrimaryLightColor,
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-      ),
-      headlineSmall: GoogleFonts.poppins(
-        color: kFontPrimaryLightColor,
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-      ),
-      bodyLarge: GoogleFonts.poppins(
-        color: kFontPrimaryLightColor,
-        fontSize: 16.0,
-      ),
-      bodyMedium: GoogleFonts.openSans(
-        color: kFontPrimaryLightColor,
-        fontSize: 14.0,
-      ),
-      titleMedium: GoogleFonts.openSans(
-        color: kFontSecondaryLightColor,
-        fontSize: 14.0,
-      ),
-      titleSmall: GoogleFonts.openSans(
-        color: kFontSecondaryLightColor,
-        fontSize: 12.0,
-      ),
-      labelLarge: GoogleFonts.roboto(
-        color: kBackgroundLightColor,
-        fontSize: 14.0,
-        fontWeight: FontWeight.w500,
-      ),
-    ),
+    );
+  }
 
-    //  colorScheme: ColorScheme(surface: kBackgroundLightColor),
-    //colorScheme: ColorScheme(error: kErrorLightColor),
-    //colorScheme: ColorScheme.fromSwatch().copyWith(surface: kBackgroundLightColor),
-  );
-}
+  static ColorScheme _getColorScheme(Color primaryColor,
+      {Color? secondaryColor, Color? backgroundColor}) {
+    final brightness = ThemeData.estimateBrightnessForColor(primaryColor);
+    final isDark = brightness == Brightness.dark;
 
-/// Dark Mode
-ThemeData darkThemeData(BuildContext context) {
-  return ThemeData(
-    appBarTheme: AppBarTheme(color: Colors.transparent, elevation: 0),
-    primaryColor: kPrimaryLightColor,
-    primaryColorDark: kPrimaryDarkColor,
-    hintColor: kFontSecondaryDarkColor,
-    cardColor: kCardDarkColor,
-    brightness: Brightness.dark,
-    textSelectionTheme: TextSelectionThemeData(
-      cursorColor: kPrimaryDarkColor,
-    ),
-    unselectedWidgetColor: kUnselectedDarkColor,
-    scaffoldBackgroundColor: kBackgroundDarkColor,
-    iconTheme: IconThemeData(color: kPrimaryLightColor),
-    primaryIconTheme: IconThemeData(color: kPrimaryLightColor),
-    visualDensity: VisualDensity.adaptivePlatformDensity,
-    indicatorColor: kPrimaryDarkColor,
-    buttonTheme: ButtonThemeData(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(50.0),
-      ),
-    ),
-    textTheme: GoogleFonts.poppinsTextTheme().copyWith(
-      displayLarge: GoogleFonts.poppins(
-        color: kFontPrimaryDarkColor,
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-      ),
-      displayMedium: GoogleFonts.poppins(
-        color: kFontPrimaryDarkColor,
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
-      displaySmall: GoogleFonts.poppins(
-        color: kFontPrimaryDarkColor,
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-      ),
-      headlineMedium: GoogleFonts.poppins(
-        color: kFontPrimaryDarkColor,
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-      ),
-      headlineSmall: GoogleFonts.poppins(
-        color: kFontPrimaryDarkColor,
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-      ),
-      bodyLarge: GoogleFonts.poppins(
-        color: kFontPrimaryDarkColor,
-        fontSize: 16.0,
-      ),
-      bodyMedium: GoogleFonts.openSans(
-        color: kFontPrimaryDarkColor,
-        fontSize: 14.0,
-      ),
-      titleMedium: GoogleFonts.openSans(
-        color: kFontSecondaryDarkColor,
-        fontSize: 14.0,
-      ),
-      titleSmall: GoogleFonts.openSans(
-        color: kFontSecondaryDarkColor,
-        fontSize: 12.0,
-      ),
-      labelLarge: GoogleFonts.roboto(
-        color: kFontPrimaryDarkColor,
-        fontSize: 14.0,
-        fontWeight: FontWeight.w500,
-      ),
-    ),
-    // colorScheme: ColorScheme(surface: kBackgroundDarkColor),
-    //colorScheme: ColorScheme(error: kErrorDarkColor),
-    //colorScheme: ColorScheme.fromSwatch().copyWith(surface: kBackgroundDarkColor),
-  );
+    // Determine secondary color if provided, else generate it based on primary color
+    final calculatedSecondaryColor = secondaryColor ??
+        (isDark
+            ? primaryColor.withOpacity(0.4)
+            : primaryColor.withOpacity(0.8));
+
+    // Determine background color if provided, else generate it based on primary color
+    final calculatedBackgroundColor =
+        backgroundColor ?? (isDark ? Colors.grey[900]! : Colors.white);
+
+    return ColorScheme(
+      primary: primaryColor,
+      secondary: calculatedSecondaryColor,
+      surface: calculatedBackgroundColor,
+      background: calculatedBackgroundColor,
+      error: Colors.red,
+      onPrimary: isDark ? Colors.white : Colors.black,
+      onSecondary: isDark ? Colors.white : Colors.black,
+      onSurface: isDark ? Colors.white : Colors.black,
+      onBackground: isDark ? Colors.white : Colors.black,
+      onError: isDark ? Colors.white : Colors.black,
+      brightness: brightness,
+    );
+  }
 }

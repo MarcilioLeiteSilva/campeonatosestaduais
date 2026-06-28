@@ -10,7 +10,7 @@ class EventsApi {
       final pb = PocketBaseClient().client;
       final records = await pb.collection('fixtures').getFullList(
         sort: '-date',
-        expand: 'homeTeamId,awayTeamId',
+        expand: 'homeTeamId,awayTeamId,leagueId',
       );
       if (records.isNotEmpty) {
         eListEvents = records.map((record) {
@@ -31,6 +31,12 @@ class EventsApi {
           final nameAway = awayTeamRecord?.data['name'] ?? '';
           final logoAway = awayTeamRecord?.data['logo'] ?? '';
 
+          final leagueList = record.expand['leagueId'];
+          final leagueRecord = (leagueList != null && leagueList.isNotEmpty) ? leagueList.first : null;
+          final leagueExternalId = leagueRecord?.data['externalId'] != null
+              ? (leagueRecord!.data['externalId'] as num).toInt()
+              : -1;
+
           return EventsModel(
             id: record.id,
             nameHome: nameHome,
@@ -41,6 +47,7 @@ class EventsApi {
             scoreAway: record.data['awayGoals'] != null ? (record.data['awayGoals'] as num).toInt() : null,
             dateMatch: formattedDate,
             timeMatch: record.data['statusShort'] ?? record.data['statusLong'] ?? '',
+            leagueExternalId: leagueExternalId,
           );
         }).toList();
       }

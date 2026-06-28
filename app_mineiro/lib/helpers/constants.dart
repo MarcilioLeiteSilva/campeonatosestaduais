@@ -1,71 +1,34 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+part of 'helpers.dart';
 
-// TODO: Change App name
-const String kAppName = 'Mineirão Central';
-const String kPocketBaseUrl = 'https://zapscore-pocketbase-mineiro.gtalg3.easypanel.host';
+abstract class AppText {
+  static const String appName = "Mineirão Central";
 
+  static const String avatar =
+      "https://media.licdn.com/dms/image/D4E03AQHd_Oq_clumNA/profile-displayphoto-shrink_800_800/0/1678101113406?e=2147483647&v=beta&t=v9Vh1YWSmXKvvVEufYcvLxGEuSsREBjpeN5IAQ6hEaU";
 
+  static const String report = """
+Gabriel scored the winner to return Arsenal to the top of the Premier League in a hard-fought 1-0 win over Chelsea at Stamford Bridge.
 
-///DATE Format
+Manager Mikel Arteta remains unbeaten in all of Arsenal’s Premier League visits to Stamford Bridge since he took the reins in December 2019, as his side left with all three points in a game of few clear-cut chances.
 
-int kFormatDateNumber(dateTime) => int.parse(DateFormat("dd").format(dateTime));
-String kFormatDateName(dateTime) => DateFormat("EE").format(dateTime);
+The central defender poked a probing goalward-bound looped effort from Bukayo Saka over the line for the only goal of the game in the 63rd minute.
+  """;
 
-String kFormatDateDay(dateTime) => DateFormat("dd - yyyy").format(dateTime);
+  static const String newsBody = """
+Cristiano Ronaldo denied on Tuesday that he has agreed to join Saudi club Al Nassr after Portugal's World Cup adventure.
 
-bool kIsScreenRTL(context) => Directionality.of(context)
-    .toString()
-    .contains(TextDirection.RTL.value.toLowerCase());
+The striker became a free agent after being released from his Manchester United contract last month and reports have claimed Ronaldo has agreed an extraordinarily lucrative deal to play in Saudi Arabia.
 
-///Images
+Suggestions of a bumper contract offer from the Saudi Pro League club emerged last week, with Ronaldo said to be in line to earn well over £100million a year.
 
-const kUser01 =
-    "https://media.licdn.com/dms/image/D4E03AQHd_Oq_clumNA/profile-displayphoto-shrink_200_200/0/1678101113406?e=2147483647&v=beta&t=rx7Z_y-Sxp-Yr01z1YJOIfm1w1LYe02cPmgI4xlCQH4";
+However, the 37-year-old superstar says reports of him signing a deal with Al Nassr are wrong.
 
-///Strings
+Speaking after coming off the bench in Portugal's 6-1 win over Switzerland at the World Cup, a rare substitute appearance for his country, Ronaldo was asked about the move.
 
-const kBody01 =
-    "Lautaro Martinez: Man City eye Inter Milan striker as Sergio Aguero\'s potential successor";
+"No, it's not true," he told reporters.
 
-///change theme
-/*
+Ronaldo was allowed to leave United after a television interview with Piers Morgan saw him criticise the club's owners and signal his lack of respect for manager Erik ten Hag.
 
-final themeProv = Provider.of<ThemeProvider>(context);
-onTap()=>
-//change theme
- themeProv.changeTheme();
-
- */
-
-///change Language
-/*
-
-  void _changeLanguage(String language) {
-    Locale _temp;
-    print(language);
-
-    switch (language) {
-      case 'EN':
-        _temp = Locale('en', 'US');
-        break;
-      case 'AR':
-        _temp = Locale('ar', 'AR');
-        break;
-
-      default:
-        _temp = Locale('en', 'US');
-    }
-
-    MyApp.setLocale(context, _temp);
-  }
-
-
-  onTap()=>
-
-      //change langue
-              setState(() {
-                _changeLanguage('AR');
-              });
-
- */
+He said he felt "betrayed" by United, alleging there were efforts being made to force him out, with his second stint at Old Trafford ending less than 18 months after his arrival from Juventus.
+""";
+}
