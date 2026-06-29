@@ -417,16 +417,32 @@ async function syncFixtures(leagueId, season = 2026) {
         continue;
       }
 
-      // Buscar eventos apenas para partidas finalizadas ou ao vivo (evita 429 em partidas futuras)
+      // Buscar eventos apenas para partidas finalizadas/ao vivo E que ainda não têm eventos no PocketBase
+      // Isso evita 429 ao não buscar repetidamente eventos de partidas já sincronizadas
       const statusQueTemEventos = ['FT', 'AET', 'PEN', '1H', 'HT', '2H', 'ET', 'BT', 'LIVE'];
       const statusAtual = f.statusShort || '';
+      const isLive = ['1H', 'HT', '2H', 'ET', 'BT', 'LIVE'].includes(statusAtual);
+      const isFinished = ['FT', 'AET', 'PEN'].includes(statusAtual);
+
       if (pbFixtureId && statusQueTemEventos.includes(statusAtual)) {
         try {
-          await delay(600);
+          // Para partidas já finalizadas, verificar se já existem eventos no banco antes de chamar a API
+          if (isFinished) {
+            const existingEvents = await pb.collection('fixture_events').getList(1, 1, {
+              filter: `fixtureId = '${pbFixtureId}'`
+            });
+            if (existingEvents.totalItems > 0) {
+              // Já tem eventos, pular busca na API (economiza rate limit)
+              continue;
+            }
+          }
+
+          await delay(1000);
           const eventsRes = await requestWithRetry(`${zapscoreUrl}/fixtures/events?fixtureId=${f.externalId}`);
           const events = eventsRes?.data;
           if (events && Array.isArray(events) && events.length > 0) {
             await syncFixtureEvents(pbFixtureId, events, extHomeId, extAwayId);
+            console.log(`Eventos sincronizados para partida ${f.externalId}: ${events.length} eventos.`);
           }
         } catch (evErr) {
           console.error(`Erro ao buscar eventos da partida ${f.externalId}:`, evErr.message);
