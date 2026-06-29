@@ -9,39 +9,51 @@ class SecurityScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Security'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        children: [
-          CardTileSwitch(
-            label: 'Remember me',
-            value: true,
-            onChange: (value) {},
-          ),
-          CardTileSwitch(
-            label: 'Biometric ID',
-            value: true,
-            onChange: (value) {},
-          ),
-          CardTileSwitch(
-            label: 'Face ID',
-            value: true,
-            onChange: (value) {},
-          ),
-          ListTile(
-            title: Text(
-              'Two-Factor Authentication',
-              style: context.textTheme.bodyMedium,
-            ),
-            contentPadding: EdgeInsets.zero,
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-          ),
-          const Gap(20),
-          CardLogin(
-            label: 'Change Password',
-            onTap: () {},
-            color: AppColor.info,
-          ),
-        ],
+      body: BlocBuilder<SettingCubit, SettingState>(
+        builder: (context, state) {
+          final cubit = context.read<SettingCubit>();
+
+          return ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            children: [
+              CardTileSwitch(
+                label: 'Remember me',
+                value: state.rememberMe,
+                onChange: (value) => cubit.toggleSecuritySetting('remember_me', value),
+              ),
+              CardTileSwitch(
+                label: 'Biometric ID',
+                value: state.biometricId,
+                onChange: (value) => cubit.toggleSecuritySetting('biometric_id', value),
+              ),
+              CardTileSwitch(
+                label: 'Face ID',
+                value: state.faceId,
+                onChange: (value) => cubit.toggleSecuritySetting('face_id', value),
+              ),
+              const Divider(color: AppColor.info, height: 20),
+              ListTile(
+                title: Text(
+                  'Two-Factor Authentication',
+                  style: context.textTheme.bodyMedium,
+                ),
+                contentPadding: EdgeInsets.zero,
+                trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                onTap: () {
+                  EasyLoading.showInfo('Autenticação de Dois Fatores disponível em breve.');
+                },
+              ),
+              const Gap(20),
+              CardLogin(
+                label: 'Change Password',
+                onTap: () {
+                  EasyLoading.showInfo('Função disponível apenas para usuários autenticados.');
+                },
+                color: AppColor.info,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
