@@ -250,10 +250,12 @@ class FaqItem extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    label,
-                    style: context.textTheme.bodyMedium!.copyWith(
-                      fontSize: 18,
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: context.textTheme.bodyMedium!.copyWith(
+                        fontSize: 18,
+                      ),
                     ),
                   ),
                   const Icon(
