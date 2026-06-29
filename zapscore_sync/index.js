@@ -13,7 +13,12 @@ try {
 
   // Prioridade 1: variável de ambiente FIREBASE_SERVICE_ACCOUNT (ideal para produção no EasyPanel)
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    let rawJson = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+    // Se não começar com '{', assume que está codificado em Base64
+    if (!rawJson.startsWith('{')) {
+      rawJson = Buffer.from(rawJson, 'base64').toString('utf8');
+    }
+    serviceAccount = JSON.parse(rawJson);
     console.log("Firebase: Credenciais carregadas da variável de ambiente FIREBASE_SERVICE_ACCOUNT.");
   // Prioridade 2: arquivo local service-account.json (para desenvolvimento local)
   } else if (fs.existsSync('./service-account.json')) {
