@@ -417,10 +417,12 @@ async function syncFixtures(leagueId, season = 2026) {
         continue;
       }
 
-      // Buscar e sincronizar eventos da partida via endpoint separado
-      if (pbFixtureId) {
+      // Buscar eventos apenas para partidas finalizadas ou ao vivo (evita 429 em partidas futuras)
+      const statusQueTemEventos = ['FT', 'AET', 'PEN', '1H', 'HT', '2H', 'ET', 'BT', 'LIVE'];
+      const statusAtual = f.statusShort || '';
+      if (pbFixtureId && statusQueTemEventos.includes(statusAtual)) {
         try {
-          await delay(400);
+          await delay(600);
           const eventsRes = await requestWithRetry(`${zapscoreUrl}/fixtures/events?fixtureId=${f.externalId}`);
           const events = eventsRes?.data;
           if (events && Array.isArray(events) && events.length > 0) {
@@ -430,12 +432,7 @@ async function syncFixtures(leagueId, season = 2026) {
           console.error(`Erro ao buscar eventos da partida ${f.externalId}:`, evErr.message);
         }
       }
-
-      // Sincronizar escalações e estatísticas reais da ZapScore
-      if (pbFixtureId) {
-        await syncFixtureLineups(pbFixtureId, f.externalId);
-        await syncFixtureStatistics(pbFixtureId, f.externalId);
-      }
+      // Nota: lineups e statistics não são disponibilizados pela ZapScore para o Campeonato Mineiro
     }
   } catch (error) {
     console.error(`Erro ao sincronizar partidas da liga ${leagueId}:`, error.message);
