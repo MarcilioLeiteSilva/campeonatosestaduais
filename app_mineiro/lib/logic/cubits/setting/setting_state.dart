@@ -12,12 +12,10 @@ class SettingState {
 
   // Notificações
   final String notificationPermission;
-  final bool notifMatchAlert;
-  final bool notifFeaturedNews;
-  final bool notifFeaturedVideo;
-  final bool notifStreaming;
-  final bool notifPromotions;
-  final bool notifAppUpdates;
+  final bool notifPlacar;
+  final bool notifGols;
+  final bool notifSubstituicoes;
+  final bool notifCartoes;
 
   // General
   final bool autoRefresh;
@@ -38,12 +36,10 @@ class SettingState {
     this.favoriteTeam,
     this.favoriteTeamLogo,
     this.notificationPermission = 'notDetermined',
-    this.notifMatchAlert = true,
-    this.notifFeaturedNews = false,
-    this.notifFeaturedVideo = true,
-    this.notifStreaming = false,
-    this.notifPromotions = true,
-    this.notifAppUpdates = true,
+    this.notifPlacar = true,
+    this.notifGols = true,
+    this.notifSubstituicoes = true,
+    this.notifCartoes = true,
     this.autoRefresh = true,
     this.vibration = true,
     this.rememberMe = true,
@@ -61,12 +57,10 @@ class SettingState {
     final String? favoriteTeam,
     final String? favoriteTeamLogo,
     final String? notificationPermission,
-    final bool? notifMatchAlert,
-    final bool? notifFeaturedNews,
-    final bool? notifFeaturedVideo,
-    final bool? notifStreaming,
-    final bool? notifPromotions,
-    final bool? notifAppUpdates,
+    final bool? notifPlacar,
+    final bool? notifGols,
+    final bool? notifSubstituicoes,
+    final bool? notifCartoes,
     final bool? autoRefresh,
     final bool? vibration,
     final bool? rememberMe,
@@ -83,12 +77,10 @@ class SettingState {
       favoriteTeam: favoriteTeam != null ? (favoriteTeam.isEmpty ? null : favoriteTeam) : this.favoriteTeam,
       favoriteTeamLogo: favoriteTeamLogo != null ? (favoriteTeamLogo.isEmpty ? null : favoriteTeamLogo) : this.favoriteTeamLogo,
       notificationPermission: notificationPermission ?? this.notificationPermission,
-      notifMatchAlert: notifMatchAlert ?? this.notifMatchAlert,
-      notifFeaturedNews: notifFeaturedNews ?? this.notifFeaturedNews,
-      notifFeaturedVideo: notifFeaturedVideo ?? this.notifFeaturedVideo,
-      notifStreaming: notifStreaming ?? this.notifStreaming,
-      notifPromotions: notifPromotions ?? this.notifPromotions,
-      notifAppUpdates: notifAppUpdates ?? this.notifAppUpdates,
+      notifPlacar: notifPlacar ?? this.notifPlacar,
+      notifGols: notifGols ?? this.notifGols,
+      notifSubstituicoes: notifSubstituicoes ?? this.notifSubstituicoes,
+      notifCartoes: notifCartoes ?? this.notifCartoes,
       autoRefresh: autoRefresh ?? this.autoRefresh,
       vibration: vibration ?? this.vibration,
       rememberMe: rememberMe ?? this.rememberMe,

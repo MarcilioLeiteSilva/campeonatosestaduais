@@ -55,10 +55,10 @@ function formatTopic(name) {
              .replace(/ /g, '_');
 }
 
-async function sendPushNotification(topicName, title, body) {
+async function sendPushNotification(topicName, subTopic, title, body) {
   if (!firebaseMessaging) return;
   const sanitized = formatTopic(topicName);
-  const topic = `time_${sanitized}`;
+  const topic = `time_${sanitized}_${subTopic}`;
   const message = {
     notification: {
       title: title,
@@ -75,9 +75,9 @@ async function sendPushNotification(topicName, title, body) {
   }
 }
 
-async function sendMatchPushNotification(matchId, title, body) {
+async function sendMatchPushNotification(matchId, subTopic, title, body) {
   if (!firebaseMessaging) return;
-  const topic = `match_${matchId}`;
+  const topic = `match_${matchId}_${subTopic}`;
   const message = {
     notification: {
       title: title,
@@ -373,9 +373,9 @@ async function syncFixtures(leagueId, season = 2026) {
           if ((oldStatus === 'NS' || oldStatus === '') && (newStatus === '1H' || newStatus === 'LIVE' || f.elapsed > 0)) {
             const title = `⏱️ JOGO INICIADO!`;
             const body = `${homeRecord.name} vs ${awayRecord.name} começou no campeonato!`;
-            await sendPushNotification(homeRecord.name, title, body);
-            await sendPushNotification(awayRecord.name, title, body);
-            await sendMatchPushNotification(f.externalId, title, body);
+            await sendPushNotification(homeRecord.name, 'placar', title, body);
+            await sendPushNotification(awayRecord.name, 'placar', title, body);
+            await sendMatchPushNotification(f.externalId, 'placar', title, body);
           }
 
           // 2. Detectar Fim de Jogo (Não era encerrado, e agora é: FT ou PEN ou AET)
@@ -384,25 +384,25 @@ async function syncFixtures(leagueId, season = 2026) {
           if (!isOldFinished && isNewFinished) {
             const title = `🏁 FIM DE JOGO!`;
             const body = `${homeRecord.name} ${newHomeGoals !== null ? newHomeGoals : 0} x ${newAwayGoals !== null ? newAwayGoals : 0} ${awayRecord.name} (Fim da partida)`;
-            await sendPushNotification(homeRecord.name, title, body);
-            await sendPushNotification(awayRecord.name, title, body);
-            await sendMatchPushNotification(f.externalId, title, body);
+            await sendPushNotification(homeRecord.name, 'placar', title, body);
+            await sendPushNotification(awayRecord.name, 'placar', title, body);
+            await sendMatchPushNotification(f.externalId, 'placar', title, body);
           }
 
           // 3. Detectar Alteração de Placar (Gols)
           if (newHomeGoals !== null && oldHomeGoals !== null && newHomeGoals > oldHomeGoals) {
             const title = `⚽ GOL DO ${homeRecord.name.toUpperCase()}!`;
             const body = `Placar: ${homeRecord.name} ${newHomeGoals} x ${newAwayGoals !== null ? newAwayGoals : 0} ${awayRecord.name}`;
-            await sendPushNotification(homeRecord.name, title, body);
-            await sendPushNotification(awayRecord.name, title, body);
-            await sendMatchPushNotification(f.externalId, title, body);
+            await sendPushNotification(homeRecord.name, 'gols', title, body);
+            await sendPushNotification(awayRecord.name, 'gols', title, body);
+            await sendMatchPushNotification(f.externalId, 'gols', title, body);
           }
           if (newAwayGoals !== null && oldAwayGoals !== null && newAwayGoals > oldAwayGoals) {
             const title = `⚽ GOL DO ${awayRecord.name.toUpperCase()}!`;
             const body = `Placar: ${homeRecord.name} ${newHomeGoals !== null ? newHomeGoals : 0} x ${newAwayGoals} ${awayRecord.name}`;
-            await sendPushNotification(homeRecord.name, title, body);
-            await sendPushNotification(awayRecord.name, title, body);
-            await sendMatchPushNotification(f.externalId, title, body);
+            await sendPushNotification(homeRecord.name, 'gols', title, body);
+            await sendPushNotification(awayRecord.name, 'gols', title, body);
+            await sendMatchPushNotification(f.externalId, 'gols', title, body);
           }
 
           const updated = await pb.collection('fixtures').update(existingRecord.id, data);
@@ -509,9 +509,9 @@ async function syncFixtureEvents(pbFixtureId, events, homeId, awayId) {
         if (e.type === 'subst' || e.type?.toLowerCase() === 'subst') {
           const title = `🔄 Substituição no ${eventTeamName}`;
           const body = `(${minutes}') Sai: ${assist || 'Jogador'}, Entra: ${player}`;
-          await sendPushNotification(homeName, title, body);
-          await sendPushNotification(awayName, title, body);
-          await sendMatchPushNotification(fixture.externalId, title, body);
+          await sendPushNotification(homeName, 'substituicoes', title, body);
+          await sendPushNotification(awayName, 'substituicoes', title, body);
+          await sendMatchPushNotification(fixture.externalId, 'substituicoes', title, body);
         }
 
         // 2. Cartão Vermelho (Red Card)
@@ -519,9 +519,9 @@ async function syncFixtureEvents(pbFixtureId, events, homeId, awayId) {
             (e.detail?.toLowerCase().includes('red') || e.detail?.toLowerCase() === 'red card')) {
           const title = `🟥 CARTÃO VERMELHO!`;
           const body = `(${minutes}') ${player} do ${eventTeamName} foi expulso do jogo!`;
-          await sendPushNotification(homeName, title, body);
-          await sendPushNotification(awayName, title, body);
-          await sendMatchPushNotification(fixture.externalId, title, body);
+          await sendPushNotification(homeName, 'cartoes', title, body);
+          await sendPushNotification(awayName, 'cartoes', title, body);
+          await sendMatchPushNotification(fixture.externalId, 'cartoes', title, body);
         }
       } catch (err) {
         console.error("Erro ao despachar notificação para evento de jogo:", err.message);

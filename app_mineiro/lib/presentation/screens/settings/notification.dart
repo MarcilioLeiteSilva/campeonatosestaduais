@@ -7,7 +7,7 @@ class EditNotifScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notification'),
+        title: const Text('Notification Settings'),
       ),
       body: BlocBuilder<SettingCubit, SettingState>(
         builder: (context, state) {
@@ -24,73 +24,84 @@ class EditNotifScreen extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 15),
                 child: Padding(
                   padding: const EdgeInsets.all(15),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        isAuthorized ? Icons.notifications_active : Icons.notifications_off,
-                        color: isAuthorized ? Colors.green : Colors.redAccent,
-                        size: 32,
-                      ),
-                      const Gap(15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'System Notifications',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            const Gap(4),
-                            Text(
-                              isAuthorized ? 'Authorized and active' : 'Disabled in system settings',
-                              style: const TextStyle(color: Colors.grey, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (!isAuthorized)
-                        ElevatedButton(
-                          onPressed: () => cubit.requestNotificationPermission(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColor.info,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            isAuthorized ? Icons.notifications_active : Icons.notifications_off,
+                            color: isAuthorized ? Colors.green : Colors.redAccent,
+                            size: 32,
                           ),
-                          child: const Text('Enable'),
+                          const Gap(15),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'System Notifications',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                const Gap(4),
+                                Text(
+                                  isAuthorized ? 'Authorized and active' : 'Disabled in system settings',
+                                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (!isAuthorized)
+                            ElevatedButton(
+                              onPressed: () => cubit.requestNotificationPermission(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColor.info,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              child: const Text('Enable'),
+                            ),
+                        ],
+                      ),
+                      if (isAuthorized) ...[
+                        const Divider(height: 25, color: Colors.white10),
+                        const Text(
+                          'Nota: Para desativar as notificações do sistema por completo, por favor acesse as Configurações do seu aparelho.',
+                          style: TextStyle(color: Colors.white60, fontSize: 11, fontStyle: FontStyle.italic),
                         ),
+                      ],
                     ],
                   ),
                 ),
               ),
+              const Gap(10),
+              Text(
+                'NOTIFICAÇÕES DE PARTIDAS',
+                style: context.textTheme.labelLarge?.copyWith(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Divider(color: Colors.white10, height: 15),
               CardTileSwitch(
-                label: 'Match Alert',
-                value: state.notifMatchAlert,
-                onChange: (value) => cubit.toggleNotification('notif_match_alert', value),
+                label: 'Início e Fim de Jogo (Placar)',
+                value: state.notifPlacar,
+                onChange: (value) => cubit.toggleNotification('notif_placar', value),
               ),
               CardTileSwitch(
-                label: 'Featured News',
-                value: state.notifFeaturedNews,
-                onChange: (value) => cubit.toggleNotification('notif_featured_news', value),
+                label: 'Gols',
+                value: state.notifGols,
+                onChange: (value) => cubit.toggleNotification('notif_gols', value),
               ),
               CardTileSwitch(
-                label: 'Featured Video',
-                value: state.notifFeaturedVideo,
-                onChange: (value) => cubit.toggleNotification('notif_featured_video', value),
+                label: 'Substituições',
+                value: state.notifSubstituicoes,
+                onChange: (value) => cubit.toggleNotification('notif_substituicoes', value),
               ),
               CardTileSwitch(
-                label: 'Streaming',
-                value: state.notifStreaming,
-                onChange: (value) => cubit.toggleNotification('notif_streaming', value),
-              ),
-              CardTileSwitch(
-                label: 'Promotions',
-                value: state.notifPromotions,
-                onChange: (value) => cubit.toggleNotification('notif_promotions', value),
-              ),
-              CardTileSwitch(
-                label: 'App Updates',
-                value: state.notifAppUpdates,
-                onChange: (value) => cubit.toggleNotification('notif_app_updates', value),
+                label: 'Cartões Vermelhos',
+                value: state.notifCartoes,
+                onChange: (value) => cubit.toggleNotification('notif_cartoes', value),
               ),
             ],
           );

@@ -22,12 +22,10 @@ class SettingCubit extends Cubit<SettingState> {
       final favLogo = prefs.getString('favorite_team_logo');
 
       // Toggles
-      final notifMatchAlert = prefs.getBool('notif_match_alert') ?? true;
-      final notifFeaturedNews = prefs.getBool('notif_featured_news') ?? false;
-      final notifFeaturedVideo = prefs.getBool('notif_featured_video') ?? true;
-      final notifStreaming = prefs.getBool('notif_streaming') ?? false;
-      final notifPromotions = prefs.getBool('notif_promotions') ?? true;
-      final notifAppUpdates = prefs.getBool('notif_app_updates') ?? true;
+      final notifPlacar = prefs.getBool('notif_placar') ?? true;
+      final notifGols = prefs.getBool('notif_gols') ?? true;
+      final notifSubstituicoes = prefs.getBool('notif_substituicoes') ?? true;
+      final notifCartoes = prefs.getBool('notif_cartoes') ?? true;
 
       final autoRefresh = prefs.getBool('auto_refresh') ?? true;
       final vibration = prefs.getBool('vibration') ?? true;
@@ -47,12 +45,10 @@ class SettingCubit extends Cubit<SettingState> {
         favoriteTeam: favTeam ?? '',
         favoriteTeamLogo: favLogo ?? '',
         notificationPermission: notifPerm,
-        notifMatchAlert: notifMatchAlert,
-        notifFeaturedNews: notifFeaturedNews,
-        notifFeaturedVideo: notifFeaturedVideo,
-        notifStreaming: notifStreaming,
-        notifPromotions: notifPromotions,
-        notifAppUpdates: notifAppUpdates,
+        notifPlacar: notifPlacar,
+        notifGols: notifGols,
+        notifSubstituicoes: notifSubstituicoes,
+        notifCartoes: notifCartoes,
         autoRefresh: autoRefresh,
         vibration: vibration,
         rememberMe: rememberMe,
@@ -63,10 +59,27 @@ class SettingCubit extends Cubit<SettingState> {
   }
 
   String _sanitizeTopic(String name) {
-    // Mantém apenas caracteres alfanuméricos e sublinhados, adequado para tópicos do Firebase
     return name.toLowerCase()
         .replaceAll(RegExp(r'[^\w\s]+'), '')
         .replaceAll(' ', '_');
+  }
+
+  Future<void> _unsubscribeAllTeamTopics(String team) async {
+    final topic = _sanitizeTopic(team);
+    final messaging = FirebaseMessaging.instance;
+    await messaging.unsubscribeFromTopic('time_${topic}_placar');
+    await messaging.unsubscribeFromTopic('time_${topic}_gols');
+    await messaging.unsubscribeFromTopic('time_${topic}_substituicoes');
+    await messaging.unsubscribeFromTopic('time_${topic}_cartoes');
+  }
+
+  Future<void> _subscribeActiveTeamTopics(String team) async {
+    final topic = _sanitizeTopic(team);
+    final messaging = FirebaseMessaging.instance;
+    if (state.notifPlacar) await messaging.subscribeToTopic('time_${topic}_placar');
+    if (state.notifGols) await messaging.subscribeToTopic('time_${topic}_gols');
+    if (state.notifSubstituicoes) await messaging.subscribeToTopic('time_${topic}_substituicoes');
+    if (state.notifCartoes) await messaging.subscribeToTopic('time_${topic}_cartoes');
   }
 
   Future<void> loginLocal({
@@ -91,14 +104,11 @@ class SettingCubit extends Cubit<SettingState> {
       }
 
       // Sincronizar tópicos do Firebase Messaging
-      final messaging = FirebaseMessaging.instance;
       if (oldFav != null && oldFav.isNotEmpty) {
-        final oldTopic = _sanitizeTopic(oldFav);
-        await messaging.unsubscribeFromTopic('time_$oldTopic');
+        await _unsubscribeAllTeamTopics(oldFav);
       }
       if (favoriteTeam != null && favoriteTeam.isNotEmpty) {
-        final newTopic = _sanitizeTopic(favoriteTeam);
-        await messaging.subscribeToTopic('time_$newTopic');
+        await _subscribeActiveTeamTopics(favoriteTeam);
       }
 
       emit(state.copyWith(
@@ -118,10 +128,9 @@ class SettingCubit extends Cubit<SettingState> {
       await prefs.remove('favorite_team');
       await prefs.remove('favorite_team_logo');
 
-      // Desinscrever do tópico do time antigo
+      // Desinscrever de todos os tópicos do time antigo
       if (oldFav != null && oldFav.isNotEmpty) {
-        final oldTopic = _sanitizeTopic(oldFav);
-        await FirebaseMessaging.instance.unsubscribeFromTopic('time_$oldTopic');
+        await _unsubscribeAllTeamTopics(oldFav);
       }
 
       emit(state.copyWith(
@@ -152,33 +161,32 @@ class SettingCubit extends Cubit<SettingState> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(key, value);
 
-      // Sincronizar com tópicos correspondentes do Firebase
-      final messaging = FirebaseMessaging.instance;
-      final topic = key.replaceFirst('notif_', ''); // ex: notif_match_alert -> match_alert
-      if (value) {
-        await messaging.subscribeToTopic(topic);
-      } else {
-        await messaging.unsubscribeFromTopic(topic);
+      // Sincronizar com tópicos correspondentes do Firebase se o usuário tem time favorito
+      if (state.favoriteTeam != null && state.favoriteTeam!.isNotEmpty) {
+        final messaging = FirebaseMessaging.instance;
+        final teamTopic = _sanitizeTopic(state.favoriteTeam!);
+        final subTopic = key.replaceFirst('notif_', ''); // ex: notif_placar -> placar
+        final topic = 'time_${teamTopic}_$subTopic';
+
+        if (value) {
+          await messaging.subscribeToTopic(topic);
+        } else {
+          await messaging.unsubscribeFromTopic(topic);
+        }
       }
 
       switch (key) {
-        case 'notif_match_alert':
-          emit(state.copyWith(notifMatchAlert: value));
+        case 'notif_placar':
+          emit(state.copyWith(notifPlacar: value));
           break;
-        case 'notif_featured_news':
-          emit(state.copyWith(notifFeaturedNews: value));
+        case 'notif_gols':
+          emit(state.copyWith(notifGols: value));
           break;
-        case 'notif_featured_video':
-          emit(state.copyWith(notifFeaturedVideo: value));
+        case 'notif_substituicoes':
+          emit(state.copyWith(notifSubstituicoes: value));
           break;
-        case 'notif_streaming':
-          emit(state.copyWith(notifStreaming: value));
-          break;
-        case 'notif_promotions':
-          emit(state.copyWith(notifPromotions: value));
-          break;
-        case 'notif_app_updates':
-          emit(state.copyWith(notifAppUpdates: value));
+        case 'notif_cartoes':
+          emit(state.copyWith(notifCartoes: value));
           break;
       }
     } catch (_) {}
