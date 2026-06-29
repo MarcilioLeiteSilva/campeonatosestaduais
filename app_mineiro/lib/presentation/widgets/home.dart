@@ -6,13 +6,18 @@ class HomeNavBottom extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
     return ClipRRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: Container(
           width: context.width,
-          height: 80,
-          padding: const EdgeInsets.symmetric(horizontal: 15),
+          height: 65 + bottomPadding,
+          padding: EdgeInsets.only(
+            left: 15,
+            right: 15,
+            bottom: bottomPadding > 0 ? bottomPadding - 5 : 0,
+          ),
           decoration: BoxDecoration(
             color: AppColor.background.withOpacity(.7),
             borderRadius: BorderRadius.circular(10),

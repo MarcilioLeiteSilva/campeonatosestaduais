@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
@@ -63,6 +62,5 @@ part 'news/watch_content.dart';
 part 'settings/about_mineiro.dart';
 part 'settings/edit_info.dart';
 part 'settings/general.dart';
-part 'settings/help_center.dart';
 part 'settings/notification.dart';
 part 'settings/security.dart';

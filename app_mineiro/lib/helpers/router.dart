@@ -20,7 +20,6 @@ const String screenWatchContent = 'watch-content';
 const String screenAbout = "about-sett";
 const String screenEditInfo = "editinfo-sett";
 const String screenGeneral = "general-sett";
-const String screenHelpCenter = "help-center-sett";
 const String screenEditNotification = "editnotif-sett";
 const String screenSecurity = "securty-sett";
 
@@ -115,11 +114,6 @@ abstract class RouterApp {
         path: '/$screenGeneral',
         name: screenGeneral,
         builder: (context, state) => const GeneralScreen(),
-      ),
-      GoRoute(
-        path: '/$screenHelpCenter',
-        name: screenHelpCenter,
-        builder: (context, state) => const HelpCenterScreen(),
       ),
       GoRoute(
         path: '/$screenEditNotification',

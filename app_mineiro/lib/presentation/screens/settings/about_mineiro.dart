@@ -7,95 +7,71 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('About ${AppText.appName}'),
+        title: const Text('About'),
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 15),
+        padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 15),
         children: [
           Image.asset(
             Assets.mineiroLogo,
             width: 140,
             height: 140,
           ),
-          const Gap(10),
+          const Gap(15),
           Center(
             child: Text(
-              '${AppText.appName} v1.0.0',
-              style: context.textTheme.headlineSmall,
+              AppText.appName,
+              style: context.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          const Gap(20),
-          const Divider(endIndent: 15, indent: 15),
-          ListTile(
-            title: Text(
-              'Mouad Zizi',
-              style: context.textTheme.bodySmall,
+          Center(
+            child: Text(
+              'Versão 1.0.0',
+              style: context.textTheme.labelSmall,
             ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
           ),
-          ListTile(
-            title: Text(
-              'Fess',
-              style: context.textTheme.bodySmall,
+          const Gap(25),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              'Acompanhe todas as rodadas, clubes, classificações e resultados em tempo real do Campeonato Mineiro diretamente no seu celular.',
+              textAlign: TextAlign.center,
+              style: context.textTheme.bodyMedium?.copyWith(
+                color: Colors.white70,
+              ),
             ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
           ),
-          ListTile(
-            title: Text(
-              'Developer',
-              style: context.textTheme.bodySmall,
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-          ),
-          ListTile(
-            title: Text(
-              'Partner',
-              style: context.textTheme.bodySmall,
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-          ),
+          const Gap(30),
+          const Divider(),
           ListTile(
             title: Text(
               'Privacy Policy',
               style: context.textTheme.bodySmall,
             ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {},
           ),
+          const Divider(height: 1),
           ListTile(
             title: Text(
-              'Accessibility',
+              'Terms of Service',
               style: context.textTheme.bodySmall,
             ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {},
           ),
+          const Divider(height: 1),
           ListTile(
             title: Text(
-              'Feedback',
+              'Contact & Feedback',
               style: context.textTheme.bodySmall,
             ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {},
           ),
-          ListTile(
-            title: Text(
-              'Rate us',
-              style: context.textTheme.bodySmall,
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-          ),
-          ListTile(
-            title: Text(
-              'Visit Our Website',
-              style: context.textTheme.bodySmall,
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-          ),
-          ListTile(
-            title: Text(
-              'Follow us on Social Media',
-              style: context.textTheme.bodySmall,
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-          ),
+          const Divider(height: 1),
         ],
       ),
     );

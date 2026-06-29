@@ -29,22 +29,23 @@ class AccountPage extends StatelessWidget {
                   height: 65,
                   child: CardNoImage(radius: 100),
                 ),
-                const Gap(10),
+                const Gap(15),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Mouad Zizi'),
                       Text(
-                        'moad.devloper@gmail.com',
+                        'Torcedor Mineiro',
+                        style: context.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'visitante@campeonatomineiro.com.br',
                         style: context.textTheme.labelSmall,
                       ),
                     ],
                   ),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: SvgPicture.asset(Assets.edit),
                 ),
               ],
             ),
@@ -89,14 +90,6 @@ class AccountPage extends StatelessWidget {
             color: Colors.blue.withOpacity(.1),
             onTap: () {},
           ),*/
-          CardSettingItem(
-            label: 'Help Center',
-            icon: Assets.help,
-            color: Colors.orange.withOpacity(.1),
-            onTap: () {
-              context.pushNamed(screenHelpCenter);
-            },
-          ),
           CardSettingItem(
             label: 'About ${AppText.appName}',
             icon: Assets.info,

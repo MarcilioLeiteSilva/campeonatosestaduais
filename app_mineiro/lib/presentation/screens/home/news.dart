@@ -10,13 +10,11 @@ class NewsPage extends StatefulWidget {
 class _NewsPageState extends State<NewsPage> {
   int indexTab = 0;
   List<String> listLeague = [
-    "All",
-    "Football",
-    "World Cup",
-    "Premier League",
-    "La Liga",
-    "Serie A",
-    "Al Botoula Pro"
+    "Todas",
+    "Módulo I",
+    "Módulo II",
+    "Feminino",
+    "FMF"
   ];
 
   @override
