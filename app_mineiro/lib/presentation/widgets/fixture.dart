@@ -3,128 +3,82 @@ part of 'widgets.dart';
 class CardSlideLeagueHome extends StatelessWidget {
   const CardSlideLeagueHome({super.key});
 
+  String _shortenLeagueName(String name) {
+    if (name.contains('Módulo 1')) return 'Módulo 1';
+    if (name.contains('Módulo 2')) return 'Módulo 2';
+    return name;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SettingCubit, SettingState>(
       builder: (context, state) {
         return Container(
           width: context.width,
-          height: 85,
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
           color: AppColor.background,
-          child: Material(
-            color: Colors.transparent,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              itemBuilder: (_, i) {
-                if (i == 0) {
-                  return CheepLeagueItem(
-                    league: LeaguesModels(id: -1, name: 'Todas', logo: ''),
-                    isSelected: state.selectedLeagueId == -1,
+          child: Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColor.card,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColor.info, width: 1),
+            ),
+            child: Row(
+              children: List.generate(LeaguesApi.lLeaguesList.length, (i) {
+                final league = LeaguesApi.lLeaguesList[i];
+                final isSelected = state.selectedLeagueId == league.id ||
+                    (state.selectedLeagueId == -1 && i == 0);
+                return Expanded(
+                  child: InkWell(
                     onTap: () {
-                      context.read<SettingCubit>().updateSelectedLeague(-1);
+                      context.read<SettingCubit>().updateSelectedLeague(league.id);
                     },
-                  );
-                }
-                final league = LeaguesApi.lLeaguesList[i - 1];
-                return CheepLeagueItem(
-                  league: league,
-                  isSelected: state.selectedLeagueId == league.id,
-                  onTap: () {
-                    context.read<SettingCubit>().updateSelectedLeague(league.id);
-                  },
+                    borderRadius: BorderRadius.circular(9),
+                    child: Container(
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColor.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (league.logo.isNotEmpty) ...[
+                            SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: league.logo.startsWith('http')
+                                    ? Image.network(
+                                        getImageUrl(league.logo),
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.sports_soccer, size: 14, color: Colors.grey),
+                                      )
+                                    : Image.asset(league.logo),
+                              ),
+                            ),
+                            const Gap(8),
+                          ],
+                          Text(
+                            _shortenLeagueName(league.name),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? Colors.white : Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 );
-              },
-              separatorBuilder: (_, i) => const Gap(12),
-              itemCount: LeaguesApi.lLeaguesList.length + 1,
+              }),
             ),
           ),
         );
       },
-    );
-  }
-}
-
-class CheepLeagueItem extends StatelessWidget {
-  const CheepLeagueItem({
-    super.key,
-    required this.league,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final LeaguesModels league;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        width: league.id == -1 ? 90 : 180,
-        decoration: BoxDecoration(
-          color: isSelected ? AppColor.primary : AppColor.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColor.primary : AppColor.info,
-            width: 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColor.primary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  )
-                ]
-              : null,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (league.id != -1) ...[
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: (league.logo.startsWith('http'))
-                      ? Image.network(
-                          getImageUrl(league.logo),
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.sports_soccer, size: 24, color: Colors.grey),
-                        )
-                      : const Icon(Icons.sports_soccer, size: 24, color: Colors.grey),
-                ),
-              ),
-              const Gap(10),
-            ] else ...[
-              Icon(
-                Icons.grid_view_rounded,
-                size: 20,
-                color: isSelected ? Colors.white : AppColor.hint,
-              ),
-              const Gap(6),
-            ],
-            Expanded(
-              child: Text(
-                league.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: context.textTheme.bodySmall!.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : Colors.white70,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -154,22 +108,27 @@ class CardCalendarHome extends StatelessWidget {
                 const CardLiveButton(),
                 const Gap(8),
                 Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: dates
-                        .map(
-                          (model) => CardCalendarItem(
-                            select: model.day == selectedDate.day &&
-                                selectedDate.month == model.month,
-                            date: model,
-                            onTap: () {
-                              context
-                                  .read<SettingCubit>()
-                                  .updateCalendarDate(model);
-                            },
-                          ),
-                        )
-                        .toList(),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: dates
+                          .map(
+                            (model) => Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 3),
+                              child: CardCalendarItem(
+                                select: model.day == selectedDate.day &&
+                                    selectedDate.month == model.month,
+                                date: model,
+                                onTap: () {
+                                  context
+                                      .read<SettingCubit>()
+                                      .updateCalendarDate(model);
+                                },
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
                   ),
                 ),
                 /* if (false)
@@ -218,29 +177,52 @@ class CardLiveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => context.pushNamed(screenLive),
-      borderRadius: BorderRadius.circular(30),
-      child: Container(
-        decoration: BoxDecoration(
+    return BlocBuilder<SettingCubit, SettingState>(
+      builder: (context, state) {
+        final isActive = state.showLiveOnly;
+        return InkWell(
+          onTap: () => context.read<SettingCubit>().toggleLiveOnly(),
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: AppColor.primary,
-            width: 1,
+          child: Container(
+            decoration: BoxDecoration(
+              color: isActive ? Colors.red : Colors.transparent,
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(
+                color: isActive ? Colors.red : AppColor.primary,
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 7,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isActive) ...[
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const Gap(6),
+                ],
+                Text(
+                  'Live',
+                  style: context.textTheme.bodySmall!.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: isActive ? Colors.white : AppColor.primary,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 11,
-          vertical: 7,
-        ),
-        child: Text(
-          'Live',
-          style: context.textTheme.bodySmall!.copyWith(
-            fontSize: 16,
-            color: AppColor.primary,
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -695,32 +677,44 @@ class CardFixtureDetail extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Expanded(
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: 65,
-                      height: 65,
-                      child: actualMatch.logoHome.startsWith('http')
-                          ? Image.network(
-                              getImageUrl(actualMatch.logoHome),
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
-                            )
-                          : const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
-                    ),
-                    const Gap(8),
-                    Text(
-                      actualMatch.nameHome,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.textTheme.bodySmall!.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                child: InkWell(
+                  onTap: () {
+                    context.pushNamed(
+                      screenTeam,
+                      extra: {
+                        'name': actualMatch.nameHome,
+                        'logo': actualMatch.logoHome,
+                      },
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: 65,
+                        height: 65,
+                        child: actualMatch.logoHome.startsWith('http')
+                            ? Image.network(
+                                getImageUrl(actualMatch.logoHome),
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
+                              )
+                            : const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
                       ),
-                    ),
-                  ],
+                      const Gap(8),
+                      Text(
+                        actualMatch.nameHome,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.bodySmall!.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               Padding(
@@ -755,32 +749,44 @@ class CardFixtureDetail extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: 65,
-                      height: 65,
-                      child: actualMatch.logoAway.startsWith('http')
-                          ? Image.network(
-                              getImageUrl(actualMatch.logoAway),
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
-                            )
-                          : const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
-                    ),
-                    const Gap(8),
-                    Text(
-                      actualMatch.nameAway,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.textTheme.bodySmall!.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                child: InkWell(
+                  onTap: () {
+                    context.pushNamed(
+                      screenTeam,
+                      extra: {
+                        'name': actualMatch.nameAway,
+                        'logo': actualMatch.logoAway,
+                      },
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: 65,
+                        height: 65,
+                        child: actualMatch.logoAway.startsWith('http')
+                            ? Image.network(
+                                getImageUrl(actualMatch.logoAway),
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
+                              )
+                            : const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
                       ),
-                    ),
-                  ],
+                      const Gap(8),
+                      Text(
+                        actualMatch.nameAway,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.bodySmall!.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -950,6 +956,20 @@ class CardFixtureItemReal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final status = formatMatchStatus(match.timeMatch);
+    final isLive = status == 'Ao Vivo';
+    final isFinished = status == 'Encerrado' || status == 'Pênaltis';
+
+    // Determinar vencedor para negrito
+    bool isWinnerHome = false;
+    bool isWinnerAway = false;
+    if (isFinished && match.scoreHome != null && match.scoreAway != null) {
+      final sh = (match.scoreHome as num).toInt();
+      final sa = (match.scoreAway as num).toInt();
+      isWinnerHome = sh > sa;
+      isWinnerAway = sa > sh;
+    }
+
     return InkWell(
       onTap: () {
         context.pushNamed(
@@ -957,6 +977,7 @@ class CardFixtureItemReal extends StatelessWidget {
           extra: match,
         );
       },
+      borderRadius: BorderRadius.circular(10),
       child: Ink(
         width: context.width,
         decoration: BoxDecoration(
@@ -967,91 +988,180 @@ class CardFixtureItemReal extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(10),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-        child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 45,
-              alignment: Alignment.center,
-              child: Text(
-                match.timeMatch,
-                style: context.textTheme.bodySmall!.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: match.timeMatch == 'FT' ? Colors.grey : AppColor.primary,
+            // Top Header: Date and Status
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 11,
+                      color: Colors.grey,
+                    ),
+                    const Gap(6),
+                    Text(
+                      match.dateMatch,
+                      style: context.textTheme.labelSmall!.copyWith(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isLive
+                        ? Colors.red.withOpacity(0.15)
+                        : (isFinished
+                            ? Colors.grey.withOpacity(0.1)
+                            : AppColor.primary.withOpacity(0.15)),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isLive
+                          ? Colors.red
+                          : (isFinished ? Colors.grey.withOpacity(0.4) : AppColor.primary),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Text(
+                    status,
+                    style: context.textTheme.labelSmall!.copyWith(
+                      color: isLive ? Colors.red : (isFinished ? Colors.grey : AppColor.primary),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const Gap(15),
-            Expanded(
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: match.logoHome.startsWith('http')
-                            ? Image.network(
-                                getImageUrl(match.logoHome),
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.sports_soccer, size: 20, color: Colors.grey),
-                              )
-                            : const CardNoImage(radius: 4),
-                      ),
-                      const Gap(10),
-                      Expanded(
-                        child: Text(
-                          match.nameHome,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.textTheme.bodySmall,
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Divider(height: 1, color: AppColor.info),
+            ),
+            // Teams and scores
+            Column(
+              children: [
+                // Home Team Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          context.pushNamed(
+                            screenTeam,
+                            extra: {
+                              'name': match.nameHome,
+                              'logo': match.logoHome,
+                            },
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(4),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: match.logoHome.startsWith('http')
+                                  ? Image.network(
+                                      getImageUrl(match.logoHome),
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Icon(Icons.sports_soccer, size: 18, color: Colors.grey),
+                                    )
+                                  : const CardNoImage(radius: 4),
+                            ),
+                            const Gap(10),
+                            Expanded(
+                              child: Text(
+                                match.nameHome,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.textTheme.bodySmall!.copyWith(
+                                  fontWeight: isWinnerHome ? FontWeight.bold : FontWeight.normal,
+                                  color: isWinnerHome ? Colors.white : Colors.white70,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      if (match.scoreHome != null)
-                        Text(
-                          '${match.scoreHome}',
-                          style: context.textTheme.bodyMedium!.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const Gap(12),
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: match.logoAway.startsWith('http')
-                            ? Image.network(
-                                getImageUrl(match.logoAway),
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.sports_soccer, size: 20, color: Colors.grey),
-                              )
-                            : const CardNoImage(radius: 4),
-                      ),
-                      const Gap(10),
-                      Expanded(
-                        child: Text(
-                          match.nameAway,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.textTheme.bodySmall,
+                    ),
+                    const Gap(15),
+                    if (match.scoreHome != null)
+                      Text(
+                        '${match.scoreHome}',
+                        style: context.textTheme.bodyMedium!.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isWinnerHome ? Colors.white : Colors.white70,
                         ),
                       ),
-                      if (match.scoreAway != null)
-                        Text(
-                          '${match.scoreAway}',
-                          style: context.textTheme.bodyMedium!.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                  ],
+                ),
+                const Gap(8),
+                // Away Team Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          context.pushNamed(
+                            screenTeam,
+                            extra: {
+                              'name': match.nameAway,
+                              'logo': match.logoAway,
+                            },
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(4),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: match.logoAway.startsWith('http')
+                                  ? Image.network(
+                                      getImageUrl(match.logoAway),
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Icon(Icons.sports_soccer, size: 18, color: Colors.grey),
+                                    )
+                                  : const CardNoImage(radius: 4),
+                            ),
+                            const Gap(10),
+                            Expanded(
+                              child: Text(
+                                match.nameAway,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.textTheme.bodySmall!.copyWith(
+                                  fontWeight: isWinnerAway ? FontWeight.bold : FontWeight.normal,
+                                  color: isWinnerAway ? Colors.white : Colors.white70,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                    ],
-                  ),
-                ],
-              ),
+                      ),
+                    ),
+                    const Gap(15),
+                    if (match.scoreAway != null)
+                      Text(
+                        '${match.scoreAway}',
+                        style: context.textTheme.bodyMedium!.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isWinnerAway ? Colors.white : Colors.white70,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

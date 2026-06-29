@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
@@ -12,6 +13,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:app_mineiro/helpers/helpers.dart';
 import 'package:app_mineiro/models/events.dart';
 import 'package:syncfusion_flutter_datepicker/datepicker.dart';
@@ -23,6 +25,7 @@ import 'package:app_mineiro/api/events_api.dart';
 import 'package:app_mineiro/api/leagues_api.dart';
 import 'package:app_mineiro/api/clubs_api.dart';
 import 'package:app_mineiro/api/news_api.dart';
+import 'package:app_mineiro/helpers/squads.dart';
 
 part 'splash.dart';
 part 'user/welcome.dart';
@@ -42,6 +45,8 @@ part 'home/watch.dart';
 part 'home/news.dart';
 part 'home/home.dart';
 part 'home/account.dart';
+part 'home/standings.dart';
+
 part 'home/live.dart';
 part 'home/search.dart';
 

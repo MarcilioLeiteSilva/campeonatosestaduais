@@ -33,6 +33,9 @@ dependencies:
   flutter_bloc:
   pocketbase: ^0.24.0
   intl: ^0.18.1
+  shared_preferences: ^2.5.5
+  firebase_core: ^4.11.0
+  firebase_messaging: ^16.4.1
 
 
 

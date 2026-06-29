@@ -16,6 +16,7 @@ class ClubsApi {
           name: record.data['name'] ?? '',
           logo: record.data['logo'] ?? '',
           picked: record.data['picked'] ?? false,
+          externalId: record.data['externalId'] != null ? (record.data['externalId'] as num).toInt() : null,
         )).toList();
       }
     } catch (e) {

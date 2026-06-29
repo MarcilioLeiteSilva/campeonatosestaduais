@@ -66,9 +66,9 @@ class HomeNavBottom extends StatelessWidget {
                   context.read<SettingCubit>().updateHomeIndex(4);
                 },
                 selected: index == 4,
-                label: 'Account',
-                icon: Assets.accountLine,
-                solidIcon: Assets.accountSolid,
+                label: 'Tabela',
+                iconData: Icons.leaderboard_outlined,
+                solidIconData: Icons.leaderboard,
               ),
             ],
           ),
@@ -79,15 +79,22 @@ class HomeNavBottom extends StatelessWidget {
 }
 
 class HomeTabBottomNavItem extends StatelessWidget {
-  const HomeTabBottomNavItem(
-      {super.key,
-      required this.selected,
-      required this.label,
-      required this.icon,
-      required this.onTap,
-      required this.solidIcon});
+  const HomeTabBottomNavItem({
+    super.key,
+    required this.selected,
+    required this.label,
+    this.icon,
+    this.solidIcon,
+    this.iconData,
+    this.solidIconData,
+    required this.onTap,
+  });
   final bool selected;
-  final String label, icon, solidIcon;
+  final String label;
+  final String? icon;
+  final String? solidIcon;
+  final IconData? iconData;
+  final IconData? solidIconData;
   final Function() onTap;
 
   @override
@@ -97,10 +104,17 @@ class HomeTabBottomNavItem extends StatelessWidget {
       icon: Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          SvgPicture.asset(
-            selected ? solidIcon : icon,
-            color: selected ? AppColor.primary : AppColor.hint,
-          ),
+          if (iconData != null)
+            Icon(
+              selected ? solidIconData : iconData,
+              color: selected ? AppColor.primary : AppColor.hint,
+              size: 24,
+            )
+          else if (icon != null && solidIcon != null)
+            SvgPicture.asset(
+              selected ? solidIcon! : icon!,
+              color: selected ? AppColor.primary : AppColor.hint,
+            ),
           Text(
             label,
             style: context.textTheme.labelSmall!.copyWith(
@@ -112,3 +126,4 @@ class HomeTabBottomNavItem extends StatelessWidget {
     );
   }
 }
+

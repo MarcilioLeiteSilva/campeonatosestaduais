@@ -1,5 +1,7 @@
 import 'package:app_mineiro/models/events.dart';
 import 'package:app_mineiro/models/fixture_event.dart';
+import 'package:app_mineiro/models/fixture_lineup.dart';
+import 'package:app_mineiro/models/fixture_stat.dart';
 import 'package:app_mineiro/services/pocketbase_client.dart';
 import 'package:intl/intl.dart';
 
@@ -51,6 +53,7 @@ class EventsApi {
             leagueExternalId: leagueExternalId,
             round: record.data['round'] ?? '',
             elapsed: record.data['elapsed'] != null ? (record.data['elapsed'] as num).toInt() : null,
+            dateTime: DateTime.tryParse(dateStr)?.toLocal(),
             venueName: record.data['venueName'] ?? '',
             venueCity: record.data['venueCity'] ?? '',
             oddsHome: record.data['oddsHome'] != null ? (record.data['oddsHome'] as num).toDouble() : null,
@@ -88,6 +91,57 @@ class EventsApi {
     } catch (e) {
       print("Erro ao carregar eventos da partida: $e");
       matchEvents = [];
+    }
+  }
+
+  static List<FixtureLineupModel> matchLineups = [];
+
+  static Future<void> loadLineupsForFixture(String fixtureId) async {
+    try {
+      final pb = PocketBaseClient().client;
+      final records = await pb.collection('fixture_lineups').getFullList(
+        filter: "fixtureId = '$fixtureId'",
+      );
+      matchLineups = records.map((record) {
+        return FixtureLineupModel(
+          id: record.id,
+          fixtureId: record.data['fixtureId'] ?? '',
+          fixtureExternalId: record.data['fixtureExternalId'] != null ? (record.data['fixtureExternalId'] as num).toInt() : 0,
+          teamId: record.data['teamId'] ?? '',
+          formation: record.data['formation'] ?? '',
+          playerName: record.data['playerName'] ?? '',
+          playerNumber: record.data['playerNumber'] != null ? (record.data['playerNumber'] as num).toInt() : null,
+          playerPos: record.data['playerPos'] ?? '',
+          isSubstitute: record.data['isSubstitute'] ?? false,
+        );
+      }).toList();
+    } catch (e) {
+      print("Erro ao carregar lineups da partida: $e");
+      matchLineups = [];
+    }
+  }
+
+  static List<FixtureStatModel> matchStats = [];
+
+  static Future<void> loadStatisticsForFixture(String fixtureId) async {
+    try {
+      final pb = PocketBaseClient().client;
+      final records = await pb.collection('fixture_statistics').getFullList(
+        filter: "fixtureId = '$fixtureId'",
+      );
+      matchStats = records.map((record) {
+        return FixtureStatModel(
+          id: record.id,
+          fixtureId: record.data['fixtureId'] ?? '',
+          fixtureExternalId: record.data['fixtureExternalId'] != null ? (record.data['fixtureExternalId'] as num).toInt() : 0,
+          teamId: record.data['teamId'] ?? '',
+          statType: record.data['statType'] ?? '',
+          statValue: record.data['statValue'] ?? '',
+        );
+      }).toList();
+    } catch (e) {
+      print("Erro ao carregar estatísticas da partida: $e");
+      matchStats = [];
     }
   }
 }

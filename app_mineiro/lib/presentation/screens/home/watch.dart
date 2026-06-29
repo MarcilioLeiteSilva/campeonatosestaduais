@@ -7,7 +7,7 @@ class WatchPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final news = NewsApi.aListNews;
     return Scaffold(
-      drawer: const Drawer(),
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text("Watch"),
         centerTitle: false,

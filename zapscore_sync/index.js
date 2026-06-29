@@ -1,8 +1,84 @@
 import PocketBase from 'pocketbase';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import admin from 'firebase-admin';
+import { getMessaging } from 'firebase-admin/messaging';
+import fs from 'fs';
 
 dotenv.config();
+
+let firebaseMessaging = null;
+try {
+  let serviceAccount = null;
+
+  // Prioridade 1: variável de ambiente FIREBASE_SERVICE_ACCOUNT (ideal para produção no EasyPanel)
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    console.log("Firebase: Credenciais carregadas da variável de ambiente FIREBASE_SERVICE_ACCOUNT.");
+  // Prioridade 2: arquivo local service-account.json (para desenvolvimento local)
+  } else if (fs.existsSync('./service-account.json')) {
+    serviceAccount = JSON.parse(fs.readFileSync('./service-account.json', 'utf8'));
+    console.log("Firebase: Credenciais carregadas do arquivo 'service-account.json'.");
+  } else {
+    console.warn("AVISO: Credenciais do Firebase não encontradas. Configure a variável de ambiente FIREBASE_SERVICE_ACCOUNT ou coloque o arquivo 'service-account.json' na pasta zapscore_sync. As notificações push não serão enviadas.");
+  }
+
+  if (serviceAccount) {
+    admin.initializeApp({
+      credential: admin.cert(serviceAccount)
+    });
+    firebaseMessaging = getMessaging();
+    console.log("Firebase Admin SDK inicializado com sucesso para envio de notificações!");
+  }
+} catch (err) {
+  console.error("Erro ao inicializar o Firebase Admin SDK:", err.message);
+}
+
+function formatTopic(name) {
+  if (!name) return '';
+  return name.toLowerCase()
+             .replace(/[^\w\s]+/g, '')
+             .replace(/ /g, '_');
+}
+
+async function sendPushNotification(topicName, title, body) {
+  if (!firebaseMessaging) return;
+  const sanitized = formatTopic(topicName);
+  const topic = `time_${sanitized}`;
+  const message = {
+    notification: {
+      title: title,
+      body: body
+    },
+    topic: topic
+  };
+
+  try {
+    await firebaseMessaging.send(message);
+    console.log(`Notificação enviada para o tópico '${topic}': "${title} - ${body}"`);
+  } catch (e) {
+    console.error(`Erro ao enviar notificação para o tópico '${topic}':`, e.message);
+  }
+}
+
+async function sendMatchPushNotification(matchId, title, body) {
+  if (!firebaseMessaging) return;
+  const topic = `match_${matchId}`;
+  const message = {
+    notification: {
+      title: title,
+      body: body
+    },
+    topic: topic
+  };
+
+  try {
+    await firebaseMessaging.send(message);
+    console.log(`Notificação enviada para o tópico da partida '${topic}': "${title} - ${body}"`);
+  } catch (e) {
+    console.error(`Erro ao enviar notificação para a partida '${topic}':`, e.message);
+  }
+}
 
 const pbUrl = process.env.POCKETBASE_URL || 'http://127.0.0.1:8090';
 const pbAdminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
@@ -70,6 +146,31 @@ async function ensureCollectionsExist() {
         { name: 'image', type: 'text' },
         { name: 'date', type: 'text' },
         { name: 'body', type: 'text' }
+      ]
+    },
+    {
+      name: 'fixture_lineups',
+      type: 'base',
+      schema: [
+        { name: 'fixtureId', type: 'text', required: true },
+        { name: 'fixtureExternalId', type: 'number', required: true },
+        { name: 'teamId', type: 'text', required: true },
+        { name: 'formation', type: 'text' },
+        { name: 'playerName', type: 'text', required: true },
+        { name: 'playerNumber', type: 'number' },
+        { name: 'playerPos', type: 'text' },
+        { name: 'isSubstitute', type: 'bool' }
+      ]
+    },
+    {
+      name: 'fixture_statistics',
+      type: 'base',
+      schema: [
+        { name: 'fixtureId', type: 'text', required: true },
+        { name: 'fixtureExternalId', type: 'number', required: true },
+        { name: 'teamId', type: 'text', required: true },
+        { name: 'statType', type: 'text', required: true },
+        { name: 'statValue', type: 'text', required: true }
       ]
     }
   ];
@@ -188,7 +289,7 @@ async function syncTeams(leagueId) {
 async function syncFixtures(leagueId, season = 2026) {
   console.log(`Sincronizando partidas da liga ${leagueId} (Temporada ${season})...`);
   try {
-    const response = await axios.get(`${zapscoreUrl}/fixtures?leagueId=${leagueId}&season=${season}`);
+    const response = await axios.get(`${zapscoreUrl}/fixtures?leagueId=${leagueId}&season=${season}&limit=200`);
     const fixtures = response.data;
 
     // Cache de competições e times em memória para resolver relações
@@ -245,6 +346,51 @@ async function syncFixtures(leagueId, season = 2026) {
 
       try {
         if (existingRecord) {
+          // Detectar alterações para notificações
+          const oldStatus = existingRecord.statusShort;
+          const newStatus = f.statusShort || '';
+
+          const oldHomeGoals = existingRecord.homeGoals;
+          const newHomeGoals = f.homeGoals !== null ? f.homeGoals : null;
+          const oldAwayGoals = existingRecord.awayGoals;
+          const newAwayGoals = f.awayGoals !== null ? f.awayGoals : null;
+
+          // 1. Detectar Início de Jogo (NS -> 1H ou similar)
+          if ((oldStatus === 'NS' || oldStatus === '') && (newStatus === '1H' || newStatus === 'LIVE' || f.elapsed > 0)) {
+            const title = `⏱️ JOGO INICIADO!`;
+            const body = `${homeRecord.name} vs ${awayRecord.name} começou no campeonato!`;
+            await sendPushNotification(homeRecord.name, title, body);
+            await sendPushNotification(awayRecord.name, title, body);
+            await sendMatchPushNotification(f.externalId, title, body);
+          }
+
+          // 2. Detectar Fim de Jogo (Não era encerrado, e agora é: FT ou PEN ou AET)
+          const isOldFinished = oldStatus === 'FT' || oldStatus === 'PEN' || oldStatus === 'AET';
+          const isNewFinished = newStatus === 'FT' || newStatus === 'PEN' || newStatus === 'AET';
+          if (!isOldFinished && isNewFinished) {
+            const title = `🏁 FIM DE JOGO!`;
+            const body = `${homeRecord.name} ${newHomeGoals !== null ? newHomeGoals : 0} x ${newAwayGoals !== null ? newAwayGoals : 0} ${awayRecord.name} (Fim da partida)`;
+            await sendPushNotification(homeRecord.name, title, body);
+            await sendPushNotification(awayRecord.name, title, body);
+            await sendMatchPushNotification(f.externalId, title, body);
+          }
+
+          // 3. Detectar Alteração de Placar (Gols)
+          if (newHomeGoals !== null && oldHomeGoals !== null && newHomeGoals > oldHomeGoals) {
+            const title = `⚽ GOL DO ${homeRecord.name.toUpperCase()}!`;
+            const body = `Placar: ${homeRecord.name} ${newHomeGoals} x ${newAwayGoals !== null ? newAwayGoals : 0} ${awayRecord.name}`;
+            await sendPushNotification(homeRecord.name, title, body);
+            await sendPushNotification(awayRecord.name, title, body);
+            await sendMatchPushNotification(f.externalId, title, body);
+          }
+          if (newAwayGoals !== null && oldAwayGoals !== null && newAwayGoals > oldAwayGoals) {
+            const title = `⚽ GOL DO ${awayRecord.name.toUpperCase()}!`;
+            const body = `Placar: ${homeRecord.name} ${newHomeGoals !== null ? newHomeGoals : 0} x ${newAwayGoals} ${awayRecord.name}`;
+            await sendPushNotification(homeRecord.name, title, body);
+            await sendPushNotification(awayRecord.name, title, body);
+            await sendMatchPushNotification(f.externalId, title, body);
+          }
+
           const updated = await pb.collection('fixtures').update(existingRecord.id, data);
           pbFixtureId = updated.id;
         } else {
@@ -257,9 +403,24 @@ async function syncFixtures(leagueId, season = 2026) {
         continue;
       }
 
-      // Sincronizar eventos se houver dados
-      if (f.events && f.events.length > 0 && pbFixtureId) {
-        await syncFixtureEvents(pbFixtureId, f.events, extHomeId, extAwayId);
+      // Buscar e sincronizar eventos da partida via endpoint separado
+      if (pbFixtureId) {
+        try {
+          await delay(400);
+          const eventsRes = await requestWithRetry(`${zapscoreUrl}/fixtures/events?fixtureId=${f.externalId}`);
+          const events = eventsRes?.data;
+          if (events && Array.isArray(events) && events.length > 0) {
+            await syncFixtureEvents(pbFixtureId, events, extHomeId, extAwayId);
+          }
+        } catch (evErr) {
+          console.error(`Erro ao buscar eventos da partida ${f.externalId}:`, evErr.message);
+        }
+      }
+
+      // Sincronizar escalações e estatísticas reais da ZapScore
+      if (pbFixtureId) {
+        await syncFixtureLineups(pbFixtureId, f.externalId);
+        await syncFixtureStatistics(pbFixtureId, f.externalId);
       }
     }
   } catch (error) {
@@ -298,9 +459,172 @@ async function syncFixtureEvents(pbFixtureId, events, homeId, awayId) {
 
     if (!existingRecord) {
       await pb.collection('fixture_events').create(data);
+
+      // Enviar notificações para novos eventos (Substituições e Cartões Vermelhos)
+      try {
+        const fixture = await pb.collection('fixtures').getOne(pbFixtureId, { expand: 'homeTeamId,awayTeamId' });
+        const homeName = fixture.expand.homeTeamId.name;
+        const awayName = fixture.expand.awayTeamId.name;
+        const eventTeamName = e.team?.name === 'home' || e.team?.id === homeId ? homeName : awayName;
+
+        const minutes = e.time?.elapsed || 0;
+        const player = e.player?.name || '';
+        const assist = e.assist?.name || '';
+
+        // 1. Substituição (subst)
+        if (e.type === 'subst' || e.type?.toLowerCase() === 'subst') {
+          const title = `🔄 Substituição no ${eventTeamName}`;
+          const body = `(${minutes}') Sai: ${assist || 'Jogador'}, Entra: ${player}`;
+          await sendPushNotification(homeName, title, body);
+          await sendPushNotification(awayName, title, body);
+          await sendMatchPushNotification(fixture.externalId, title, body);
+        }
+
+        // 2. Cartão Vermelho (Red Card)
+        if ((e.type === 'Card' || e.type?.toLowerCase() === 'card') && 
+            (e.detail?.toLowerCase().includes('red') || e.detail?.toLowerCase() === 'red card')) {
+          const title = `🟥 CARTÃO VERMELHO!`;
+          const body = `(${minutes}') ${player} do ${eventTeamName} foi expulso do jogo!`;
+          await sendPushNotification(homeName, title, body);
+          await sendPushNotification(awayName, title, body);
+          await sendMatchPushNotification(fixture.externalId, title, body);
+        }
+      } catch (err) {
+        console.error("Erro ao despachar notificação para evento de jogo:", err.message);
+      }
     }
   }
 }
+
+/**
+ * Aguarda o tempo especificado em milissegundos
+ */
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Faz uma requisição GET com retry automático em caso de 429 (rate limit)
+ */
+async function requestWithRetry(url, retries = 3, backoff = 2000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.get(url);
+      return response;
+    } catch (error) {
+      if (error.response?.status === 429 && i < retries - 1) {
+        const waitTime = backoff * (i + 1);
+        console.log(`Rate limit atingido. Aguardando ${waitTime}ms antes de tentar novamente...`);
+        await delay(waitTime);
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
+async function syncFixtureLineups(pbFixtureId, fixtureExternalId) {
+  try {
+    await delay(1500); // Respeitar rate limit da ZapScore API
+    const response = await requestWithRetry(`${zapscoreUrl}/fixtures/lineups?fixtureId=${fixtureExternalId}`);
+    const lineups = response?.data;
+    if (!lineups || lineups === "" || !Array.isArray(lineups)) return;
+
+    // Remove lineups antigas para evitar duplicidade
+    try {
+      const oldLineups = await pb.collection('fixture_lineups').getFullList({
+        filter: `fixtureId = '${pbFixtureId}'`
+      });
+      for (const old of oldLineups) {
+        await pb.collection('fixture_lineups').delete(old.id);
+      }
+    } catch (e) {}
+
+    for (const lineup of lineups) {
+      const teamType = lineup.team?.name === 'home' || lineup.team?.id === lineup.teamId ? 'home' : 'away';
+      const formation = lineup.formation || '';
+
+      if (lineup.startXI && Array.isArray(lineup.startXI)) {
+        for (const item of lineup.startXI) {
+          const p = item.player;
+          if (p) {
+            await pb.collection('fixture_lineups').create({
+              fixtureId: pbFixtureId,
+              fixtureExternalId: fixtureExternalId,
+              teamId: teamType,
+              formation: formation,
+              playerName: p.name || '',
+              playerNumber: p.number || null,
+              playerPos: p.pos || '',
+              isSubstitute: false
+            });
+          }
+        }
+      }
+
+      if (lineup.substitutes && Array.isArray(lineup.substitutes)) {
+        for (const item of lineup.substitutes) {
+          const p = item.player;
+          if (p) {
+            await pb.collection('fixture_lineups').create({
+              fixtureId: pbFixtureId,
+              fixtureExternalId: fixtureExternalId,
+              teamId: teamType,
+              formation: formation,
+              playerName: p.name || '',
+              playerNumber: p.number || null,
+              playerPos: p.pos || '',
+              isSubstitute: true
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`Erro ao sincronizar lineups da partida ${fixtureExternalId}:`, error.message);
+  }
+}
+
+/**
+ * Sincroniza estatísticas de uma partida
+ */
+async function syncFixtureStatistics(pbFixtureId, fixtureExternalId) {
+  try {
+    await delay(1500); // Respeitar rate limit da ZapScore API
+    const response = await requestWithRetry(`${zapscoreUrl}/fixtures/statistics?fixtureId=${fixtureExternalId}`);
+    const statsData = response?.data;
+    if (!statsData || statsData === "" || !Array.isArray(statsData)) return;
+
+    // Remove estatísticas antigas para evitar duplicidade
+    try {
+      const oldStats = await pb.collection('fixture_statistics').getFullList({
+        filter: `fixtureId = '${pbFixtureId}'`
+      });
+      for (const old of oldStats) {
+        await pb.collection('fixture_statistics').delete(old.id);
+      }
+    } catch (e) {}
+
+    for (const item of statsData) {
+      const teamType = item.team?.name === 'home' || item.team?.id === item.teamId ? 'home' : 'away';
+
+      if (item.statistics && Array.isArray(item.statistics)) {
+        for (const stat of item.statistics) {
+          await pb.collection('fixture_statistics').create({
+            fixtureId: pbFixtureId,
+            fixtureExternalId: fixtureExternalId,
+            teamId: teamType,
+            statType: stat.type || '',
+            statValue: stat.value !== null ? String(stat.value) : ''
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`Erro ao sincronizar statistics da partida ${fixtureExternalId}:`, error.message);
+  }
+}
+
 
 /**
  * Função principal de execução periódica

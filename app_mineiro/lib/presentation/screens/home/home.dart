@@ -19,7 +19,8 @@ class HomeScreen extends StatelessWidget {
                   const FavoritePage(),
                   const NewsPage(),
                   const WatchPage(),
-                  const AccountPage(),
+                  const StandingsPage(),
+
                 ][state.homeIndex],
               ),
               HomeNavBottom(index: state.homeIndex),

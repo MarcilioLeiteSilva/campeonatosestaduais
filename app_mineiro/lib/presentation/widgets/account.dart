@@ -49,7 +49,8 @@ class CardSettingItem extends StatelessWidget {
 }
 
 class SheetLogOut extends StatelessWidget {
-  const SheetLogOut({super.key});
+  const SheetLogOut({super.key, this.onConfirm});
+  final VoidCallback? onConfirm;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +94,11 @@ class SheetLogOut extends StatelessWidget {
                   label: 'Yes, Logout',
                   color: AppColor.primary,
                   onTap: () {
-                    context.pushReplacement("/");
+                    if (onConfirm != null) {
+                      onConfirm!();
+                    } else {
+                      context.pushReplacement("/");
+                    }
                   },
                 ),
               ),

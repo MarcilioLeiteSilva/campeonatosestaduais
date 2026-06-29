@@ -14,7 +14,7 @@ class _FavoritePageState extends State<FavoritePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const Drawer(),
+      drawer: const AppDrawer(),
       body: NestedScrollView(
         headerSliverBuilder: (_, i) {
           return [

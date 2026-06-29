@@ -6,6 +6,7 @@ collections_schema_pretty.json
 zapscore_sync/node_modules/
 zapscore_sync/.env
 zapscore_sync/.env*.local
+zapscore_sync/service-account.json
 
 # Flutter (app_mineiro)
 app_mineiro/.dart_tool/

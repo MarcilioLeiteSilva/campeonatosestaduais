@@ -11,6 +11,7 @@ class EventsModel {
   final int leagueExternalId;
   final String round;
   final int? elapsed;
+  final DateTime? dateTime;
   final String venueName;
   final String venueCity;
   final double? oddsHome;
@@ -30,6 +31,7 @@ class EventsModel {
     this.leagueExternalId = -1,
     this.round = '',
     this.elapsed,
+    this.dateTime,
     this.venueName = '',
     this.venueCity = '',
     this.oddsHome,

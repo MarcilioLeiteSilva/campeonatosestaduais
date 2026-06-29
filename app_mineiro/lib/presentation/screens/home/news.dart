@@ -20,7 +20,7 @@ class _NewsPageState extends State<NewsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const Drawer(),
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text("News"),
         centerTitle: false,

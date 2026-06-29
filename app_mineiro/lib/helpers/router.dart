@@ -22,6 +22,8 @@ const String screenEditInfo = "editinfo-sett";
 const String screenGeneral = "general-sett";
 const String screenEditNotification = "editnotif-sett";
 const String screenSecurity = "securty-sett";
+const String screenAccountSettings = 'account-settings';
+
 
 abstract class RouterApp {
   static final router = GoRouter(
@@ -91,7 +93,13 @@ abstract class RouterApp {
       GoRoute(
         path: '/$screenTeam',
         name: screenTeam,
-        builder: (context, state) => const TeamProfileScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, String>;
+          return TeamProfileScreen(
+            teamName: extra['name']!,
+            teamLogo: extra['logo']!,
+          );
+        },
       ),
       GoRoute(
         path: '/$screenNewsContent',
@@ -127,6 +135,11 @@ abstract class RouterApp {
         path: '/$screenSecurity',
         name: screenSecurity,
         builder: (context, state) => const SecurityScreen(),
+      ),
+      GoRoute(
+        path: '/$screenAccountSettings',
+        name: screenAccountSettings,
+        builder: (context, state) => const AccountPage(),
       ),
     ],
   );

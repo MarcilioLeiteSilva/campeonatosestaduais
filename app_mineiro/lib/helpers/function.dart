@@ -42,3 +42,38 @@ String getImageUrl(String url) {
   }
   return url;
 }
+
+String formatRoundName(String round) {
+  if (round.startsWith('Regular Season - ')) {
+    final num = round.replaceAll('Regular Season - ', '');
+    return '1ª Fase - ${num}ª Rodada';
+  }
+  if (round == 'Troféu Inconfidência - Semi-finals') {
+    return 'Troféu Inconfidência - Semifinal';
+  }
+  if (round == 'Championship - Semi-finals') {
+    return 'Semifinal';
+  }
+  if (round == '5th place') {
+    return 'Troféu Inconfidência - Final';
+  }
+  if (round == 'Final') {
+    return 'Final';
+  }
+  if (round.contains('Quarter-finals')) {
+    return 'Quartas de Final';
+  }
+  if (round.contains('Semi-finals')) {
+    return 'Semifinal';
+  }
+  return round;
+}
+
+String formatMatchStatus(String status) {
+  if (status == 'FT') return 'Encerrado';
+  if (status == 'NS') return 'Não Iniciado';
+  if (status == '1H' || status == '2H' || status == 'HT') return 'Ao Vivo';
+  if (status == 'PEN') return 'Pênaltis';
+  return status;
+}
+

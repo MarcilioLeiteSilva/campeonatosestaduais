@@ -28,3 +28,5 @@ part 'competetion.dart';
 part 'news.dart';
 part 'team.dart';
 part 'account.dart';
+part 'drawer.dart';
+
