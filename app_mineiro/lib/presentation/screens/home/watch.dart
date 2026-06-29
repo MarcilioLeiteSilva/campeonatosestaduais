@@ -5,6 +5,7 @@ class WatchPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final news = NewsApi.aListNews;
     return Scaffold(
       drawer: const Drawer(),
       appBar: AppBar(
