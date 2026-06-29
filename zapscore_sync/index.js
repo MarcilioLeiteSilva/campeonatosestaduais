@@ -418,13 +418,20 @@ async function syncFixtures(leagueId, season = 2026) {
       }
 
       // Buscar eventos apenas para partidas finalizadas/ao vivo E que ainda não têm eventos no PocketBase
-      // Isso evita 429 ao não buscar repetidamente eventos de partidas já sincronizadas
+      // E apenas se a partida for recente (iniciada a menos de 24 horas) para evitar 429 com jogos passados
       const statusQueTemEventos = ['FT', 'AET', 'PEN', '1H', 'HT', '2H', 'ET', 'BT', 'LIVE'];
       const statusAtual = f.statusShort || '';
       const isLive = ['1H', 'HT', '2H', 'ET', 'BT', 'LIVE'].includes(statusAtual);
       const isFinished = ['FT', 'AET', 'PEN'].includes(statusAtual);
 
-      if (pbFixtureId && statusQueTemEventos.includes(statusAtual)) {
+      // Calcular diferença em horas
+      const matchDate = new Date(f.date);
+      const now = new Date();
+      const diffMs = now - matchDate;
+      const diffHours = diffMs / (1000 * 60 * 60);
+      const isRecentOrLive = diffHours < 24 && diffHours > -2; // iniciou de 2h no futuro a 24h no passado
+
+      if (pbFixtureId && statusQueTemEventos.includes(statusAtual) && isRecentOrLive) {
         try {
           // Para partidas já finalizadas, verificar se já existem eventos no banco antes de chamar a API
           if (isFinished) {
