@@ -14,6 +14,13 @@ try {
   // Prioridade 1: variável de ambiente FIREBASE_SERVICE_ACCOUNT (ideal para produção no EasyPanel)
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     let rawJson = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+    // Remover aspas externas se existirem
+    if (rawJson.startsWith('"') && rawJson.endsWith('"')) {
+      rawJson = rawJson.substring(1, rawJson.length - 1).trim();
+    }
+    if (rawJson.startsWith("'") && rawJson.endsWith("'")) {
+      rawJson = rawJson.substring(1, rawJson.length - 1).trim();
+    }
     // Se não começar com '{', assume que está codificado em Base64
     if (!rawJson.startsWith('{')) {
       rawJson = Buffer.from(rawJson, 'base64').toString('utf8');
@@ -32,7 +39,10 @@ try {
     if (serviceAccount.private_key) {
       const pk = serviceAccount.private_key;
       console.log(`Firebase Key Debug: length=${pk.length}, prefix="${pk.substring(0, 30)}", suffix="${pk.substring(pk.length - 30)}"`);
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      // Limpeza completa: substitui \n literal por quebras de linha e remove retornos de carro (\r) que quebram no Linux
+      serviceAccount.private_key = serviceAccount.private_key
+        .replace(/\\n/g, '\n')
+        .replace(/\r/g, '');
       const pkFixed = serviceAccount.private_key;
       console.log(`Firebase Key Fixed Debug: length=${pkFixed.length}, prefix="${pkFixed.substring(0, 30)}", suffix="${pkFixed.substring(pkFixed.length - 30)}"`);
     }
