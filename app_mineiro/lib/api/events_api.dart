@@ -1,4 +1,5 @@
 import 'package:app_mineiro/models/events.dart';
+import 'package:app_mineiro/models/fixture_event.dart';
 import 'package:app_mineiro/services/pocketbase_client.dart';
 import 'package:intl/intl.dart';
 
@@ -56,5 +57,31 @@ class EventsApi {
     }
   }
 
+  static List<FixtureEventModel> matchEvents = [];
+
+  static Future<void> loadEventsForFixture(String fixtureId) async {
+    try {
+      final pb = PocketBaseClient().client;
+      final records = await pb.collection('fixture_events').getFullList(
+        filter: "fixtureId = '$fixtureId'",
+        sort: 'time',
+      );
+      matchEvents = records.map((record) {
+        return FixtureEventModel(
+          id: record.id,
+          fixtureId: record.data['fixtureId'] ?? '',
+          time: record.data['time'] != null ? (record.data['time'] as num).toInt() : 0,
+          teamId: record.data['teamId'] ?? '',
+          player: record.data['player'] ?? '',
+          assist: record.data['assist'] ?? '',
+          type: record.data['type'] ?? '',
+          detail: record.data['detail'] ?? '',
+        );
+      }).toList();
+    } catch (e) {
+      print("Erro ao carregar eventos da partida: $e");
+      matchEvents = [];
+    }
+  }
 }
 
