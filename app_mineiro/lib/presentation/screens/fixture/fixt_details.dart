@@ -71,7 +71,7 @@ class _FixtureDetailsState extends State<FixtureDetails> {
           Expanded(
             child: [
               _buildSummaryTab(),
-              _buildEmptyTab("Nenhum dado de estatística disponível para esta partida."),
+              _buildStatsTab(),
               _buildEmptyTab("Nenhuma escalação disponível para esta partida."),
               _buildEmptyTab("Nenhum confronto direto registrado para esta partida."),
             ][indexTab],
@@ -178,6 +178,68 @@ class _FixtureDetailsState extends State<FixtureDetails> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatsTab() {
+    if (widget.match.oddsHome == null) {
+      return _buildEmptyTab("Nenhum dado de estatística disponível para esta partida.");
+    }
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+      children: [
+        const Text(
+          'Probabilidades do Confronto (Odds)',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.white),
+        ),
+        const Gap(12),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+          decoration: BoxDecoration(
+            color: AppColor.card,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColor.info),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildOddCard("Vitória ${widget.match.nameHome}", widget.match.oddsHome!),
+              _buildOddCard("Empate", widget.match.oddsDraw ?? 0.0),
+              _buildOddCard("Vitória ${widget.match.nameAway}", widget.match.oddsAway!),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOddCard(String label, double odd) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.grey, fontSize: 13),
+          ),
+          const Gap(8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColor.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColor.primary.withOpacity(0.5)),
+            ),
+            child: Text(
+              odd.toStringAsFixed(2),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }

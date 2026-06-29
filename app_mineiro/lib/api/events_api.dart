@@ -49,6 +49,13 @@ class EventsApi {
             dateMatch: formattedDate,
             timeMatch: record.data['statusShort'] ?? record.data['statusLong'] ?? '',
             leagueExternalId: leagueExternalId,
+            round: record.data['round'] ?? '',
+            elapsed: record.data['elapsed'] != null ? (record.data['elapsed'] as num).toInt() : null,
+            venueName: record.data['venueName'] ?? '',
+            venueCity: record.data['venueCity'] ?? '',
+            oddsHome: record.data['oddsHome'] != null ? (record.data['oddsHome'] as num).toDouble() : null,
+            oddsDraw: record.data['oddsDraw'] != null ? (record.data['oddsDraw'] as num).toDouble() : null,
+            oddsAway: record.data['oddsAway'] != null ? (record.data['oddsAway'] as num).toDouble() : null,
           );
         }).toList();
       }

@@ -581,9 +581,11 @@ class CardBasicInfo extends StatelessWidget {
             icon: Assets.watchLine,
             label: 'Hora: ${match.timeMatch}',
           ),
-          const CardInfoTileItem(
+          CardInfoTileItem(
             icon: Assets.mapPinLine,
-            label: 'Minas Gerais, Brasil',
+            label: match.venueName.isNotEmpty
+                ? '${match.venueName}, ${match.venueCity}'
+                : 'Minas Gerais, Brasil',
           ),
         ],
       ),
@@ -667,11 +669,22 @@ class CardFixtureDetail extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
+              if (actualMatch.round.isNotEmpty) ...[
+                const Gap(4),
+                Text(
+                  actualMatch.round,
+                  style: context.textTheme.bodySmall!.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
               const Gap(4),
               Text(
                 'Minas Gerais, Brasil',
                 style: context.textTheme.bodySmall!.copyWith(
-                  fontSize: 14,
+                  fontSize: 13,
                   color: Colors.white70,
                 ),
               ),
