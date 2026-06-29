@@ -11,41 +11,33 @@ let firebaseMessaging = null;
 try {
   let serviceAccount = null;
 
-  // Prioridade 1: variável de ambiente FIREBASE_SERVICE_ACCOUNT (ideal para produção no EasyPanel)
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    let rawJson = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
-    // Remover aspas externas se existirem
-    if (rawJson.startsWith('"') && rawJson.endsWith('"')) {
-      rawJson = rawJson.substring(1, rawJson.length - 1).trim();
+  // Prioridade 1: variáveis individuais (mais robusta para Docker/EasyPanel)
+  // Configure: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
+  if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+    let privateKey = process.env.FIREBASE_PRIVATE_KEY.trim();
+    // Decodificar Base64 se necessário
+    if (!privateKey.startsWith('-----')) {
+      privateKey = Buffer.from(privateKey, 'base64').toString('utf8');
     }
-    if (rawJson.startsWith("'") && rawJson.endsWith("'")) {
-      rawJson = rawJson.substring(1, rawJson.length - 1).trim();
-    }
-    // Se não começar com '{', assume que está codificado em Base64
-    if (!rawJson.startsWith('{')) {
-      rawJson = Buffer.from(rawJson, 'base64').toString('utf8');
-    }
-    serviceAccount = JSON.parse(rawJson);
-    console.log("Firebase: Credenciais carregadas da variável de ambiente FIREBASE_SERVICE_ACCOUNT.");
+    // Normalizar quebras de linha
+    privateKey = privateKey.replace(/\\n/g, '\n').replace(/\r/g, '');
+    serviceAccount = {
+      type: 'service_account',
+      project_id: process.env.FIREBASE_PROJECT_ID,
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      private_key: privateKey,
+    };
+    console.log("Firebase: Credenciais carregadas das variáveis individuais (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).");
+
   // Prioridade 2: arquivo local service-account.json (para desenvolvimento local)
   } else if (fs.existsSync('./service-account.json')) {
     serviceAccount = JSON.parse(fs.readFileSync('./service-account.json', 'utf8'));
     console.log("Firebase: Credenciais carregadas do arquivo 'service-account.json'.");
   } else {
-    console.warn("AVISO: Credenciais do Firebase não encontradas. Configure a variável de ambiente FIREBASE_SERVICE_ACCOUNT ou coloque o arquivo 'service-account.json' na pasta zapscore_sync. As notificações push não serão enviadas.");
+    console.warn("AVISO: Credenciais do Firebase não encontradas. Configure as variáveis FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL e FIREBASE_PRIVATE_KEY no EasyPanel. As notificações push não serão enviadas.");
   }
 
   if (serviceAccount) {
-    if (serviceAccount.private_key) {
-      const pk = serviceAccount.private_key;
-      console.log(`Firebase Key Debug: length=${pk.length}, prefix="${pk.substring(0, 30)}", suffix="${pk.substring(pk.length - 30)}"`);
-      // Limpeza completa: substitui \n literal por quebras de linha e remove retornos de carro (\r) que quebram no Linux
-      serviceAccount.private_key = serviceAccount.private_key
-        .replace(/\\n/g, '\n')
-        .replace(/\r/g, '');
-      const pkFixed = serviceAccount.private_key;
-      console.log(`Firebase Key Fixed Debug: length=${pkFixed.length}, prefix="${pkFixed.substring(0, 30)}", suffix="${pkFixed.substring(pkFixed.length - 30)}"`);
-    }
     admin.initializeApp({
       credential: admin.cert(serviceAccount)
     });
