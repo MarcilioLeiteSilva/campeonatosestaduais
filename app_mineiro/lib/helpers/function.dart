@@ -34,3 +34,11 @@ abstract class Toast {
       ..dismissOnTap = false;
   }
 }
+
+String getImageUrl(String url) {
+  if (url.isEmpty) return '';
+  if (url.contains('media.api-sports.io')) {
+    return 'https://wsrv.nl/?url=$url';
+  }
+  return url;
+}

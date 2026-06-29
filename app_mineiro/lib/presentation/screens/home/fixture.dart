@@ -35,7 +35,7 @@ class FixturePage extends StatelessWidget {
             ),
             const SliverAppBar(
               automaticallyImplyLeading: false,
-              expandedHeight: 80,
+              expandedHeight: 180,
               flexibleSpace: FlexibleSpaceBar(
                 background: Column(
                   mainAxisSize: MainAxisSize.min,

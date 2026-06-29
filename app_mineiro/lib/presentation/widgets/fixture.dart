@@ -9,13 +9,13 @@ class CardSlideLeagueHome extends StatelessWidget {
       builder: (context, state) {
         return Container(
           width: context.width,
-          height: 42,
+          height: 85,
           color: AppColor.background,
           child: Material(
             color: Colors.transparent,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               itemBuilder: (_, i) {
                 if (i == 0) {
                   return CheepLeagueItem(
@@ -35,7 +35,7 @@ class CardSlideLeagueHome extends StatelessWidget {
                   },
                 );
               },
-              separatorBuilder: (_, i) => const Gap(10),
+              separatorBuilder: (_, i) => const Gap(12),
               itemCount: LeaguesApi.lLeaguesList.length + 1,
             ),
           ),
@@ -61,39 +61,65 @@ class CheepLeagueItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(50),
+      borderRadius: BorderRadius.circular(16),
       child: Ink(
+        width: league.id == -1 ? 90 : 180,
         decoration: BoxDecoration(
           color: isSelected ? AppColor.primary : AppColor.card,
-          borderRadius: BorderRadius.circular(50),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? AppColor.primary : AppColor.info,
             width: 1,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColor.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : null,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (league.id != -1) ...[
               SizedBox(
-                width: 20,
-                height: 20,
+                width: 32,
+                height: 32,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(6),
                   child: (league.logo.startsWith('http'))
-                      ? Image.network(league.logo, fit: BoxFit.contain)
-                      : Image.asset('assets/images/leagues/premier.png'),
+                      ? Image.network(
+                          getImageUrl(league.logo),
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.sports_soccer, size: 24, color: Colors.grey),
+                        )
+                      : const Icon(Icons.sports_soccer, size: 24, color: Colors.grey),
                 ),
               ),
-              const Gap(8),
+              const Gap(10),
+            ] else ...[
+              Icon(
+                Icons.grid_view_rounded,
+                size: 20,
+                color: isSelected ? Colors.white : AppColor.hint,
+              ),
+              const Gap(6),
             ],
-            Text(
-              league.name,
-              style: context.textTheme.bodySmall!.copyWith(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Colors.white : null,
+            Expanded(
+              child: Text(
+                league.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.textTheme.bodySmall!.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : Colors.white70,
+                ),
               ),
             ),
           ],
@@ -903,7 +929,12 @@ class CardFixtureItemReal extends StatelessWidget {
                         width: 24,
                         height: 24,
                         child: match.logoHome.startsWith('http')
-                            ? Image.network(match.logoHome, fit: BoxFit.contain)
+                            ? Image.network(
+                                getImageUrl(match.logoHome),
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.sports_soccer, size: 20, color: Colors.grey),
+                              )
                             : const CardNoImage(radius: 4),
                       ),
                       const Gap(10),
@@ -931,7 +962,12 @@ class CardFixtureItemReal extends StatelessWidget {
                         width: 24,
                         height: 24,
                         child: match.logoAway.startsWith('http')
-                            ? Image.network(match.logoAway, fit: BoxFit.contain)
+                            ? Image.network(
+                                getImageUrl(match.logoAway),
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.sports_soccer, size: 20, color: Colors.grey),
+                              )
                             : const CardNoImage(radius: 4),
                       ),
                       const Gap(10),

@@ -330,7 +330,12 @@ class CardFollowItemReal extends StatelessWidget {
               width: 55,
               height: 55,
               child: team.logo.startsWith('http')
-                  ? Image.network(team.logo, fit: BoxFit.contain)
+                  ? Image.network(
+                      getImageUrl(team.logo),
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.sports_soccer, size: 28, color: Colors.grey),
+                    )
                   : const CardNoImage(radius: 5),
             ),
             const Gap(10),
