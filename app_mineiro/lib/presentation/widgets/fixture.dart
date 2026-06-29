@@ -553,7 +553,8 @@ class CardGoalsBarLeft extends StatelessWidget {
 }
 
 class CardBasicInfo extends StatelessWidget {
-  const CardBasicInfo({super.key});
+  const CardBasicInfo({super.key, required this.match});
+  final EventsModel match;
 
   @override
   Widget build(BuildContext context) {
@@ -568,25 +569,21 @@ class CardBasicInfo extends StatelessWidget {
         color: AppColor.card,
         border: Border.all(color: AppColor.info, width: 1),
       ),
-      child: const Wrap(
+      child: Wrap(
         alignment: WrapAlignment.spaceBetween,
         runSpacing: 15,
         children: [
           CardInfoTileItem(
             icon: Assets.calendarLine,
-            label: '20 Nov, 15:00',
+            label: match.dateMatch,
           ),
           CardInfoTileItem(
-            icon: Assets.userLine,
-            label: 'Michael Oliver',
+            icon: Assets.watchLine,
+            label: 'Hora: ${match.timeMatch}',
           ),
-          CardInfoTileItem(
+          const CardInfoTileItem(
             icon: Assets.mapPinLine,
-            label: 'Stamford Bridge',
-          ),
-          CardInfoTileItem(
-            icon: Assets.usersLine,
-            label: '44,200',
+            label: 'Minas Gerais, Brasil',
           ),
         ],
       ),
@@ -618,108 +615,158 @@ class CardInfoTileItem extends StatelessWidget {
 }
 
 class CardFixtureDetail extends StatelessWidget {
-  const CardFixtureDetail({super.key});
+  const CardFixtureDetail({super.key, this.match});
+  final EventsModel? match;
 
   @override
   Widget build(BuildContext context) {
+    final actualMatch = match ?? (EventsApi.eListEvents.isNotEmpty ? EventsApi.eListEvents.first : null);
+
+    if (actualMatch == null) {
+      return const SizedBox.shrink();
+    }
+
+    final league = LeaguesApi.lLeaguesList.firstWhere(
+      (l) => l.id == actualMatch.leagueExternalId,
+      orElse: () => LeaguesModels(id: -1, name: 'Campeonato Mineiro', logo: ''),
+    );
+
+    final String scoreText = (actualMatch.scoreHome != null && actualMatch.scoreAway != null)
+        ? '${actualMatch.scoreHome} : ${actualMatch.scoreAway}'
+        : 'VS';
+
     return Container(
       width: context.width,
       constraints: BoxConstraints(
-        minHeight: context.height * .3,
+        minHeight: context.height * 0.25,
       ),
       margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: AppColor.primary,
         borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: AppColor.primary.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           Column(
             children: [
               Text(
-                'Premier League',
-                style: context.textTheme.headlineSmall,
+                league.name,
+                style: context.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
               ),
+              const Gap(4),
               Text(
-                'England',
+                'Minas Gerais, Brasil',
                 style: context.textTheme.bodySmall!.copyWith(
-                  fontSize: 15,
+                  fontSize: 14,
+                  color: Colors.white70,
                 ),
               ),
             ],
           ),
-          const Gap(15),
+          const Gap(20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Column(
-                children: [
-                  const SizedBox(
-                    width: 70,
-                    height: 70,
-                    child: CardNoImage(radius: 5),
-                  ),
-                  const Gap(5),
-                  Text(
-                    'Chelsea',
-                    style: context.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-              Column(
-                children: [
-                  Text(
-                    '0 : 1',
-                    style: context.textTheme.headlineMedium!.copyWith(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 45,
-                    ),
-                  ),
-                  const Gap(5),
-                  Text(
-                    'Full Time',
-                    style: context.textTheme.bodySmall!.copyWith(
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                children: [
-                  const SizedBox(
-                    width: 70,
-                    height: 70,
-                    child: CardNoImage(radius: 5),
-                  ),
-                  const Gap(5),
-                  Text(
-                    'Chelsea',
-                    style: context.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const Gap(15),
-          const Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
               Expanded(
                 child: Column(
                   children: [
-                    CardGoalsBarLeft(),
+                    SizedBox(
+                      width: 65,
+                      height: 65,
+                      child: actualMatch.logoHome.startsWith('http')
+                          ? Image.network(
+                              getImageUrl(actualMatch.logoHome),
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
+                            )
+                          : const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
+                    ),
+                    const Gap(8),
+                    Text(
+                      actualMatch.nameHome,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.bodySmall!.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Gap(10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Column(
+                  children: [
+                    Text(
+                      scoreText,
+                      style: context.textTheme.headlineMedium!.copyWith(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 38,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const Gap(5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        actualMatch.timeMatch,
+                        style: context.textTheme.bodySmall!.copyWith(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Expanded(
                 child: Column(
                   children: [
-                    CardGoalsBarRight(),
-                    Gap(5),
-                    CardGoalsBarRight(),
+                    SizedBox(
+                      width: 65,
+                      height: 65,
+                      child: actualMatch.logoAway.startsWith('http')
+                          ? Image.network(
+                              getImageUrl(actualMatch.logoAway),
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
+                            )
+                          : const Icon(Icons.sports_soccer, size: 45, color: Colors.white70),
+                    ),
+                    const Gap(8),
+                    Text(
+                      actualMatch.nameAway,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.bodySmall!.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -892,8 +939,10 @@ class CardFixtureItemReal extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
-        // Redireciona para detalhes da partida
-        // context.pushNamed(screenFixtureDetails);
+        context.pushNamed(
+          screenFixtureDetails,
+          extra: match,
+        );
       },
       child: Ink(
         width: context.width,

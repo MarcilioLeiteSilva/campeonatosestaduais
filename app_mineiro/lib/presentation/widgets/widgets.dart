@@ -16,6 +16,7 @@ import 'package:app_mineiro/models/teams.dart';
 
 import '../../logic/cubits/setting/setting_cubit.dart';
 import 'package:app_mineiro/api/leagues_api.dart';
+import 'package:app_mineiro/api/events_api.dart';
 
 part 'user.dart';
 part 'home.dart';

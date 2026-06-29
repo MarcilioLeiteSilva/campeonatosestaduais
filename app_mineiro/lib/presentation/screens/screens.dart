@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:app_mineiro/helpers/helpers.dart';
+import 'package:app_mineiro/models/events.dart';
 import 'package:syncfusion_flutter_datepicker/datepicker.dart';
 
 import '../../logic/cubits/setting/setting_cubit.dart';
@@ -45,13 +46,6 @@ part 'home/live.dart';
 part 'home/search.dart';
 
 part 'fixture/fixt_details.dart';
-part 'fixture/info.dart';
-part 'fixture/summary.dart';
-part 'fixture/stats.dart';
-part 'fixture/report.dart';
-part 'fixture/lienups.dart';
-part 'fixture/table.dart';
-part 'fixture/h2h.dart';
 
 part 'profile/league.dart';
 part 'profile/team.dart';

@@ -78,7 +78,10 @@ abstract class RouterApp {
       GoRoute(
         path: '/$screenFixtureDetails',
         name: screenFixtureDetails,
-        builder: (context, state) => const FixtureDetails(),
+        builder: (context, state) {
+          final match = state.extra as EventsModel;
+          return FixtureDetails(match: match);
+        },
       ),
       GoRoute(
         path: '/$screenLeague',

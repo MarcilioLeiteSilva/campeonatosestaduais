@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import 'package:app_mineiro/models/events.dart';
+import 'package:app_mineiro/models/leagues.dart';
+
 import '../presentation/screens/screens.dart';
 
 part 'colors.dart';
