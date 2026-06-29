@@ -24,10 +24,10 @@ class _SplashScreenState extends State<SplashScreen> {
     final elapsed = DateTime.now().difference(startTime);
     final remaining = const Duration(seconds: 3) - elapsed;
     if (remaining.isNegative) {
-      if (mounted) context.pushReplacementNamed(screenWelcome);
+      if (mounted) context.pushReplacementNamed(screenHome);
     } else {
       Future.delayed(remaining).then((_) {
-        if (mounted) context.pushReplacementNamed(screenWelcome);
+        if (mounted) context.pushReplacementNamed(screenHome);
       });
     }
   }
