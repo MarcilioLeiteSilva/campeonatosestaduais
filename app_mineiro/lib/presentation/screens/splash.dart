@@ -42,8 +42,10 @@ class _SplashScreenState extends State<SplashScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SvgPicture.asset(
-                    Assets.iconSvg,
+                  Image.asset(
+                    Assets.mineiroLogo,
+                    width: 130,
+                    height: 130,
                   ),
                   const Gap(15),
                   Text(AppText.appName,

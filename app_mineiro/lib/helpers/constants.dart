@@ -1,10 +1,10 @@
 part of 'helpers.dart';
 
 abstract class AppText {
-  static const String appName = "Mineirão Central";
+  static const String appName = "Campeonato Mineiro";
 
   static const String avatar =
-      "https://media.licdn.com/dms/image/D4E03AQHd_Oq_clumNA/profile-displayphoto-shrink_800_800/0/1678101113406?e=2147483647&v=beta&t=v9Vh1YWSmXKvvVEufYcvLxGEuSsREBjpeN5IAQ6hEaU";
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150";
 
   static const String report = """
 Gabriel scored the winner to return Arsenal to the top of the Premier League in a hard-fought 1-0 win over Chelsea at Stamford Bridge.

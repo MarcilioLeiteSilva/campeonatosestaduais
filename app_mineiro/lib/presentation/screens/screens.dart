@@ -60,7 +60,7 @@ part 'profile/team.dart';
 part 'news/news_content.dart';
 part 'news/watch_content.dart';
 
-part 'settings/about_scora.dart';
+part 'settings/about_mineiro.dart';
 part 'settings/edit_info.dart';
 part 'settings/general.dart';
 part 'settings/help_center.dart';

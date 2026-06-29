@@ -1,4 +1,5 @@
-package com.example.app_mineiro
+package com.prolaserfut.campmineiro
+
 
 import io.flutter.embedding.android.FlutterActivity
 

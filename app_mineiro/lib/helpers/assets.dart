@@ -3,6 +3,7 @@ part of 'helpers.dart';
 abstract class Assets {
   ///Icons
   static const String iconSvg = 'assets/icons/icon.svg';
+  static const String mineiroLogo = 'assets/images/icone_mineiro.png';
   static const String editImage = 'assets/icons/eidt_image.svg';
   static const String calendar = 'assets/icons/calendar.svg';
 

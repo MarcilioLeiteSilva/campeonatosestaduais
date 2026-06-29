@@ -12,8 +12,8 @@ class AboutScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 15),
         children: [
-          SvgPicture.asset(
-            Assets.iconSvg,
+          Image.asset(
+            Assets.mineiroLogo,
             width: 140,
             height: 140,
           ),
