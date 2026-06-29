@@ -30,7 +30,11 @@ try {
 
   if (serviceAccount) {
     if (serviceAccount.private_key) {
+      const pk = serviceAccount.private_key;
+      console.log(`Firebase Key Debug: length=${pk.length}, prefix="${pk.substring(0, 30)}", suffix="${pk.substring(pk.length - 30)}"`);
       serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      const pkFixed = serviceAccount.private_key;
+      console.log(`Firebase Key Fixed Debug: length=${pkFixed.length}, prefix="${pkFixed.substring(0, 30)}", suffix="${pkFixed.substring(pkFixed.length - 30)}"`);
     }
     admin.initializeApp({
       credential: admin.cert(serviceAccount)
