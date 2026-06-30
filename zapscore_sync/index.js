@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 import { getMessaging } from 'firebase-admin/messaging';
 import fs from 'fs';
+import vm from 'vm';
 
 dotenv.config();
 
@@ -439,7 +440,30 @@ async function syncFixtures(leagueId, season = 2026, isLiveWindow = false) {
       const diffHours = diffMs / (1000 * 60 * 60);
       const isRecentOrLive = diffHours < 24 && diffHours > -2; // iniciou de 2h no futuro a 24h no passado
 
-      if (pbFixtureId && statusQueTemEventos.includes(statusAtual) && isRecentOrLive) {
+      // Integração com ge.globo crawler para Campeonato Mineiro (Módulo 1 e 2)
+      const isMineiroLeague = [629, 619].includes(leagueId) || [629, 619].includes(f.leagueId);
+      if (isMineiroLeague && pbFixtureId && isRecentOrLive) {
+        try {
+          const globoUrl = await mapFixtureToGloboUrl(homeRecord.name, awayRecord.name, f.date);
+          if (globoUrl) {
+            // 1. Sempre tenta sincronizar as escalações se ainda não estiver completo ou se for antes/início de jogo
+            const shouldSyncSquads = ['NS', '1H', 'HT', 'LIVE'].includes(statusAtual);
+            if (shouldSyncSquads) {
+              await fetchSquadsFromGlobo(pbFixtureId, f.externalId, globoUrl);
+            }
+            
+            // 2. Se a partida iniciou ou finalizou, sincroniza eventos e estatísticas em tempo real
+            if (statusQueTemEventos.includes(statusAtual)) {
+              await syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeRecord.id, awayRecord.id, isLiveWindow);
+              await syncLiveStatsFromGlobo(pbFixtureId, f.externalId, globoUrl);
+            }
+          }
+        } catch (crawlerErr) {
+          console.error(`[Crawler] Erro no crawler ge.globo para a partida ${f.externalId}:`, crawlerErr.message);
+        }
+      }
+
+      if (pbFixtureId && statusQueTemEventos.includes(statusAtual) && isRecentOrLive && !isMineiroLeague) {
         try {
           // Para partidas já finalizadas, verificar se já existem eventos no banco antes de chamar a API
           if (isFinished) {
@@ -575,6 +599,422 @@ async function requestWithRetry(url, retries = 3, backoff = 2000) {
         throw error;
       }
     }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CRAWLER GE.GLOBO EM TEMPO REAL (ESCALAÇÕES, EVENTOS E ESTATÍSTICAS)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getTeamSlug(name) {
+  if (!name) return '';
+  const specialCases = {
+    'atlético mineiro': 'atletico-mg',
+    'atletico mineiro': 'atletico-mg',
+    'atlético-mg': 'atletico-mg',
+    'atletico-mg': 'atletico-mg',
+    'américa mineiro': 'america-mg',
+    'america mineiro': 'america-mg',
+    'américa-mg': 'america-mg',
+    'america-mg': 'america-mg',
+    'athletic club': 'athletic',
+    'democrata gv': 'democrata-gv',
+    'democrata-gv': 'democrata-gv',
+    'villa nova-mg': 'villa-nova',
+    'villa nova': 'villa-nova',
+  };
+  
+  const normalized = name.toLowerCase().trim();
+  if (specialCases[normalized]) {
+    return specialCases[normalized];
+  }
+  
+  return normalized
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+async function mapFixtureToGloboUrl(homeTeamName, awayTeamName, dateStr) {
+  const homeSlug = getTeamSlug(homeTeamName);
+  const awaySlug = getTeamSlug(awayTeamName);
+  
+  console.log(`[Crawler] Buscando URL ge.globo para: ${homeTeamName} (${homeSlug}) vs ${awayTeamName} (${awaySlug})`);
+
+  const urlsToScrape = [
+    'https://ge.globo.com/mg/futebol/campeonato-mineiro/',
+    'https://ge.globo.com/mg/futebol/campeonato-mineiro-modulo-2/',
+    'https://ge.globo.com/mg/'
+  ];
+
+  for (const pageUrl of urlsToScrape) {
+    try {
+      const response = await axios.get(pageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        timeout: 5000
+      });
+      const html = response.data;
+      
+      const matchUrls = [];
+      const absoluteRegex = /https:\/\/[a-zA-Z0-9.-]+\.globo\.com[^\s"'>]*?\/jogo\/[^\s"'>]*/gi;
+      let match;
+      while ((match = absoluteRegex.exec(html)) !== null) {
+        matchUrls.push(match[0]);
+      }
+      const relativeRegex = /["']([^"']*?\/jogo\/[^"']*?)["']/gi;
+      while ((match = relativeRegex.exec(html)) !== null) {
+        const path = match[1];
+        if (path.startsWith('http')) {
+          matchUrls.push(path);
+        } else {
+          matchUrls.push(`https://ge.globo.com${path.startsWith('/') ? '' : '/'}${path}`);
+        }
+      }
+      
+      const uniqueUrls = [...new Set(matchUrls)];
+      
+      for (const url of uniqueUrls) {
+        const lowerUrl = url.toLowerCase();
+        if (lowerUrl.includes(homeSlug) && lowerUrl.includes(awaySlug)) {
+          console.log(`[Crawler] URL ge.globo encontrada via raspagem: ${url}`);
+          return url;
+        }
+      }
+    } catch (e) {
+      console.warn(`[Crawler] Erro ao raspar a página ${pageUrl}:`, e.message);
+    }
+  }
+
+  try {
+    const date = new Date(dateStr);
+    const localDate = new Date(date.getTime() - 3 * 60 * 60 * 1000);
+    const day = String(localDate.getUTCDate()).padStart(2, '0');
+    const month = String(localDate.getUTCMonth() + 1).padStart(2, '0');
+    const year = localDate.getUTCFullYear();
+    const formattedDate = `${day}-${month}-${year}`;
+
+    const fallbackUrl = `https://ge.globo.com/mg/futebol/campeonato-mineiro/jogo/${formattedDate}/${homeSlug}-${awaySlug}.ghtml`;
+    console.log(`[Crawler] URL ge.globo não encontrada nas listagens. Utilizando fallback: ${fallbackUrl}`);
+    return fallbackUrl;
+  } catch (err) {
+    console.warn(`[Crawler] Erro ao construir URL de fallback:`, err.message);
+    return null;
+  }
+}
+
+async function fetchSquadsFromGlobo(pbFixtureId, fixtureExternalId, globoUrl) {
+  try {
+    console.log(`[Crawler] Buscando escalações ge.globo de: ${globoUrl}`);
+    const response = await axios.get(globoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 8000
+    });
+    const html = response.data;
+    
+    const scriptRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+    let match;
+    let trv2Script = null;
+    while ((match = scriptRegex.exec(html)) !== null) {
+      if (match[1].includes('window.trv2')) {
+        trv2Script = match[1];
+        break;
+      }
+    }
+    
+    if (!trv2Script) {
+      console.warn('[Crawler] Script window.trv2 não encontrado na página.');
+      return;
+    }
+    
+    const sandbox = { window: {} };
+    sandbox.window.window = sandbox.window;
+    vm.createContext(sandbox);
+    vm.runInContext(trv2Script, sandbox);
+    
+    const trv2 = sandbox.window.trv2;
+    if (!trv2 || !trv2.transmission || !trv2.transmission.match || !trv2.transmission.match.squads) {
+      console.warn('[Crawler] Estrutura de escalações (squads) não disponível no window.trv2.');
+      return;
+    }
+    
+    const squads = trv2.transmission.match.squads;
+    
+    try {
+      const oldLineups = await pb.collection('fixture_lineups').getFullList({
+        filter: `fixtureId = '${pbFixtureId}'`
+      });
+      for (const old of oldLineups) {
+        await pb.collection('fixture_lineups').delete(old.id);
+      }
+      console.log(`[Crawler] Limpou ${oldLineups.length} registros de lineups antigos.`);
+    } catch (e) {}
+    
+    const insertPlayers = async (teamType, list, isSubstitute) => {
+      if (!list || !Array.isArray(list)) return;
+      for (const p of list) {
+        const data = {
+          fixtureId: pbFixtureId,
+          fixtureExternalId: Number(fixtureExternalId),
+          teamId: teamType,
+          formation: squads[teamType === 'home' ? 'homeTeam' : 'awayTeam']?.formation || '',
+          playerName: p.popularName || p.name || '',
+          playerNumber: p.shirtNumber ? Number(p.shirtNumber) : null,
+          playerPos: p.position?.initials || p.position?.description || '',
+          isSubstitute: isSubstitute
+        };
+        await pb.collection('fixture_lineups').create(data);
+      }
+    };
+    
+    if (squads.homeTeam) {
+      await insertPlayers('home', squads.homeTeam.lineUp, false);
+      await insertPlayers('home', squads.homeTeam.bench, true);
+    }
+    
+    if (squads.awayTeam) {
+      await insertPlayers('away', squads.awayTeam.lineUp, false);
+      await insertPlayers('away', squads.awayTeam.bench, true);
+    }
+    
+    console.log(`[Crawler] Escalações ge.globo sincronizadas com sucesso!`);
+  } catch (err) {
+    console.error(`[Crawler] Erro ao sincronizar escalações do ge.globo:`, err.message);
+  }
+}
+
+async function syncLiveStatsFromGlobo(pbFixtureId, fixtureExternalId, globoUrl) {
+  try {
+    console.log(`[Crawler] Buscando estatísticas ge.globo de: ${globoUrl}`);
+    const response = await axios.get(globoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 8000
+    });
+    const html = response.data;
+    
+    const scriptRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+    let match;
+    let trv2Script = null;
+    while ((match = scriptRegex.exec(html)) !== null) {
+      if (match[1].includes('window.trv2')) {
+        trv2Script = match[1];
+        break;
+      }
+    }
+    
+    if (!trv2Script) {
+      console.warn('[Crawler] Script window.trv2 não encontrado na página.');
+      return;
+    }
+    
+    const sandbox = { window: {} };
+    sandbox.window.window = sandbox.window;
+    vm.createContext(sandbox);
+    vm.runInContext(trv2Script, sandbox);
+    
+    const trv2 = sandbox.window.trv2;
+    if (!trv2 || !trv2.statistics) {
+      console.warn('[Crawler] Estatísticas não disponíveis no window.trv2.');
+      return;
+    }
+    
+    const statistics = trv2.statistics;
+    
+    try {
+      const oldStats = await pb.collection('fixture_statistics').getFullList({
+        filter: `fixtureId = '${pbFixtureId}'`
+      });
+      for (const old of oldStats) {
+        await pb.collection('fixture_statistics').delete(old.id);
+      }
+    } catch (e) {}
+    
+    const statMapping = {
+      ballPossession: 'Posse de Bola',
+      goalFinish: 'Finalizações',
+      wrongFinish: 'Finalizações Erradas',
+      ballOutFinish: 'Finalizações para Fora',
+      cornerKick: 'Escanteios',
+      foulMade: 'Faltas',
+      yellowCardReceived: 'Cartões Amarelos',
+      redCardReceived: 'Cartões Vermelhos',
+      tackle: 'Desarmes',
+      defense: 'Defesas',
+      totalPasses: 'Passes',
+    };
+    
+    const insertStats = async (teamType, teamStats) => {
+      if (!teamStats) return;
+      for (const [key, mappingName] of Object.entries(statMapping)) {
+        if (teamStats[key] !== undefined && teamStats[key] !== null) {
+          const value = teamStats[key].total !== undefined ? teamStats[key].total : teamStats[key];
+          const data = {
+            fixtureId: pbFixtureId,
+            fixtureExternalId: Number(fixtureExternalId),
+            teamId: teamType,
+            statType: mappingName,
+            statValue: String(value)
+          };
+          await pb.collection('fixture_statistics').create(data);
+        }
+      }
+    };
+    
+    await insertStats('home', statistics.homeTeam);
+    await insertStats('away', statistics.awayTeam);
+    
+    console.log(`[Crawler] Estatísticas ge.globo sincronizadas com sucesso!`);
+  } catch (err) {
+    console.error(`[Crawler] Erro ao sincronizar estatísticas do ge.globo:`, err.message);
+  }
+}
+
+async function syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeId, awayId, isLiveWindow) {
+  try {
+    console.log(`[Crawler] Buscando lances ge.globo de: ${globoUrl}`);
+    const response = await axios.get(globoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 8000
+    });
+    const html = response.data;
+    
+    const scriptRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+    let match;
+    let trv2Script = null;
+    while ((match = scriptRegex.exec(html)) !== null) {
+      if (match[1].includes('window.trv2')) {
+        trv2Script = match[1];
+        break;
+      }
+    }
+    
+    if (!trv2Script) {
+      console.warn('[Crawler] Script window.trv2 não encontrado na página.');
+      return;
+    }
+    
+    const sandbox = { window: {} };
+    sandbox.window.window = sandbox.window;
+    vm.createContext(sandbox);
+    vm.runInContext(trv2Script, sandbox);
+    
+    const trv2 = sandbox.window.trv2;
+    if (!trv2 || !trv2.plays) {
+      console.warn('[Crawler] Lances (plays) não disponíveis no window.trv2.');
+      return;
+    }
+    
+    let plays = [];
+    if (Array.isArray(trv2.plays)) {
+      plays = trv2.plays;
+    } else if (typeof trv2.plays === 'object') {
+      plays = Object.values(trv2.plays);
+    }
+    
+    for (const play of plays) {
+      if (!play || !play.type) continue;
+      
+      const type = play.type;
+      const allowedTypes = ['gol', 'card', 'subst', 'substituicao', 'cartao'];
+      if (!allowedTypes.includes(type.toLowerCase())) continue;
+      
+      const time = play.moment || 0;
+      const description = play.description || '';
+      
+      let eventTeam = 'home';
+      if (play.team) {
+        if (play.team.type === 'away' || play.team.name === 'away') {
+          eventTeam = 'away';
+        }
+      }
+      
+      const teamDbId = eventTeam === 'home' ? homeId : awayId;
+      
+      let player = '';
+      let assist = '';
+      let detail = '';
+      
+      if (type.toLowerCase() === 'gol') {
+        player = play.player?.popularName || play.player?.name || '';
+        assist = play.assist?.popularName || play.assist?.name || '';
+        detail = 'Gol';
+      } else if (type.toLowerCase() === 'card' || type.toLowerCase() === 'cartao') {
+        player = play.player?.popularName || play.player?.name || '';
+        const isRed = description.toLowerCase().includes('vermelho') || play.cardType === 'red';
+        detail = isRed ? 'Red Card' : 'Yellow Card';
+      } else if (type.toLowerCase() === 'subst' || type.toLowerCase() === 'substituicao') {
+        player = play.playerIn?.popularName || play.playerIn?.name || '';
+        assist = play.playerOut?.popularName || play.playerOut?.name || '';
+        detail = 'Substitution';
+      }
+      
+      if (!player && description) {
+        player = description;
+      }
+      
+      let existingRecord = null;
+      try {
+        existingRecord = await pb.collection('fixture_events').getFirstListItem(
+          `fixtureId = '${pbFixtureId}' && time = ${time} && type = '${type}' && player = '${player}'`
+        );
+      } catch (err) {}
+      
+      const data = {
+        fixtureId: pbFixtureId,
+        time: time,
+        teamId: teamDbId,
+        player: player,
+        assist: assist,
+        type: type === 'substituicao' ? 'subst' : (type === 'cartao' ? 'card' : type),
+        detail: detail,
+        playerPhoto: '',
+        externalPlayerId: null
+      };
+      
+      if (!existingRecord) {
+        await pb.collection('fixture_events').create(data);
+        console.log(`[Crawler] Novo evento criado: ${time}' ${type} - ${player}`);
+        
+        if (isLiveWindow) {
+          try {
+            const fixture = await pb.collection('fixtures').getOne(pbFixtureId, { expand: 'homeTeamId,awayTeamId' });
+            const homeName = fixture.expand.homeTeamId.name;
+            const awayName = fixture.expand.awayTeamId.name;
+            const eventTeamName = eventTeam === 'home' ? homeName : awayName;
+            
+            if (type === 'subst' || type === 'substituicao') {
+              const title = `🔄 Substituição no ${eventTeamName}`;
+              const body = `(${time}') Sai: ${assist || 'Jogador'}, Entra: ${player}`;
+              await sendPushNotification(homeName, 'substituicoes', title, body);
+              await sendPushNotification(awayName, 'substituicoes', title, body);
+              await sendMatchPushNotification(fixture.externalId, 'substituicoes', title, body);
+            } else if (type === 'card' || type === 'cartao') {
+              if (detail.includes('Red')) {
+                const title = `🟥 CARTÃO VERMELHO!`;
+                const body = `(${time}') ${player} do ${eventTeamName} foi expulso do jogo!`;
+                await sendPushNotification(homeName, 'cartoes', title, body);
+                await sendPushNotification(awayName, 'cartoes', title, body);
+                await sendMatchPushNotification(fixture.externalId, 'cartoes', title, body);
+              }
+            }
+          } catch (notifErr) {
+            console.error('[Crawler] Erro ao enviar notificação do crawler:', notifErr.message);
+          }
+        }
+      }
+    }
+    console.log(`[Crawler] Lances ge.globo sincronizados com sucesso!`);
+  } catch (err) {
+    console.error(`[Crawler] Erro ao sincronizar eventos do ge.globo:`, err.message);
   }
 }
 

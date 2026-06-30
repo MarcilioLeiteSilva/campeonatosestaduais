@@ -99,20 +99,46 @@ class EventsApi {
   static Future<void> loadLineupsForFixture(String fixtureId) async {
     try {
       final pb = PocketBaseClient().client;
+      final fixtureRecord = await pb.collection('fixtures').getOne(
+        fixtureId,
+        expand: 'homeTeamId,awayTeamId',
+      );
+      
+      final homeList = fixtureRecord.expand['homeTeamId'];
+      final homeTeamRecord = (homeList != null && homeList.isNotEmpty) ? homeList.first : null;
+      final awayList = fixtureRecord.expand['awayTeamId'];
+      final awayTeamRecord = (awayList != null && awayList.isNotEmpty) ? awayList.first : null;
+      
+      final homeExtId = homeTeamRecord?.data['externalId'] != null 
+          ? (homeTeamRecord!.data['externalId'] as num).toInt() 
+          : -1;
+      final awayExtId = awayTeamRecord?.data['externalId'] != null 
+          ? (awayTeamRecord!.data['externalId'] as num).toInt() 
+          : -1;
+
       final records = await pb.collection('fixture_lineups').getFullList(
         filter: "fixtureId = '$fixtureId'",
       );
+      
       matchLineups = records.map((record) {
+        final dbTeamId = record.data['teamId'] != null ? (record.data['teamId'] as num).toInt() : -1;
+        String mappedTeamId = 'home';
+        if (dbTeamId == awayExtId) {
+          mappedTeamId = 'away';
+        } else if (dbTeamId == homeExtId) {
+          mappedTeamId = 'home';
+        }
+        
         return FixtureLineupModel(
           id: record.id,
           fixtureId: record.data['fixtureId'] ?? '',
           fixtureExternalId: record.data['fixtureExternalId'] != null ? (record.data['fixtureExternalId'] as num).toInt() : 0,
-          teamId: record.data['teamId'] ?? '',
+          teamId: mappedTeamId,
           formation: record.data['formation'] ?? '',
-          playerName: record.data['playerName'] ?? '',
-          playerNumber: record.data['playerNumber'] != null ? (record.data['playerNumber'] as num).toInt() : null,
-          playerPos: record.data['playerPos'] ?? '',
-          isSubstitute: record.data['isSubstitute'] ?? false,
+          playerName: record.data['player'] ?? '',
+          playerNumber: record.data['number'] != null ? (record.data['number'] as num).toInt() : null,
+          playerPos: record.data['pos'] ?? '',
+          isSubstitute: !(record.data['isStart'] ?? true),
         );
       }).toList();
     } catch (e) {

@@ -24,7 +24,11 @@ class _FixtureDetailsState extends State<FixtureDetails> {
       isLoadingEvents = true;
     });
     if (widget.match.id != null) {
-      await EventsApi.loadEventsForFixture(widget.match.id);
+      await Future.wait([
+        EventsApi.loadEventsForFixture(widget.match.id),
+        EventsApi.loadLineupsForFixture(widget.match.id),
+        EventsApi.loadStatisticsForFixture(widget.match.id),
+      ]);
     }
     if (mounted) {
       setState(() {
@@ -82,8 +86,16 @@ class _FixtureDetailsState extends State<FixtureDetails> {
   }
 
   Widget _buildLineupsTab() {
-    final homeSquad = TeamSquads.getSquad(widget.match.nameHome);
-    final awaySquad = TeamSquads.getSquad(widget.match.nameAway);
+    List<Map<String, String>> homeSquad;
+    List<Map<String, String>> awaySquad;
+
+    if (EventsApi.matchLineups.isNotEmpty) {
+      homeSquad = _buildSquadFromDb('home');
+      awaySquad = _buildSquadFromDb('away');
+    } else {
+      homeSquad = TeamSquads.getSquad(widget.match.nameHome);
+      awaySquad = TeamSquads.getSquad(widget.match.nameAway);
+    }
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
@@ -291,7 +303,9 @@ class _FixtureDetailsState extends State<FixtureDetails> {
   }
 
   Widget _buildStatsTab() {
-    final stats = _generateStats(widget.match);
+    final stats = EventsApi.matchStats.isNotEmpty 
+        ? _buildStatsFromDb() 
+        : _generateStats(widget.match);
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
@@ -370,6 +384,111 @@ class _FixtureDetailsState extends State<FixtureDetails> {
         ],
       ),
     );
+  }
+
+  List<Map<String, String>> _buildSquadFromDb(String teamType) {
+    final teamPlayers = EventsApi.matchLineups.where((p) => p.teamId == teamType).toList();
+    if (teamPlayers.isEmpty) return [];
+
+    final starters = teamPlayers.where((p) => !p.isSubstitute).toList();
+    final substitutes = teamPlayers.where((p) => p.isSubstitute).toList();
+
+    final gk = starters.where((p) => p.playerPos.toUpperCase().contains('GOL')).toList();
+    final def = starters.where((p) => _isDef(p.playerPos)).toList();
+    final mid = starters.where((p) => _isMid(p.playerPos)).toList();
+    final att = starters.where((p) => _isAtt(p.playerPos)).toList();
+
+    final sortedStarters = <FixtureLineupModel>[];
+    sortedStarters.addAll(gk);
+    sortedStarters.addAll(def);
+    sortedStarters.addAll(mid);
+    sortedStarters.addAll(att);
+
+    for (final p in starters) {
+      if (!sortedStarters.contains(p)) {
+        sortedStarters.add(p);
+      }
+    }
+
+    final result = sortedStarters.map((p) => {
+      'name': p.playerName,
+      'position': _getPosDesc(p.playerPos),
+    }).toList();
+
+    result.addAll(substitutes.map((p) => {
+      'name': p.playerName,
+      'position': _getPosDesc(p.playerPos),
+    }));
+
+    return result;
+  }
+
+  bool _isDef(String pos) {
+    final upper = pos.toUpperCase();
+    return upper.contains('LAD') || upper.contains('LAE') || upper.contains('ZAD') || upper.contains('ZAE') || upper.contains('ZAG') || upper.contains('DEF');
+  }
+
+  bool _isMid(String pos) {
+    final upper = pos.toUpperCase();
+    return upper.contains('VOL') || upper.contains('MEC') || upper.contains('MID') || upper.contains('MEI');
+  }
+
+  bool _isAtt(String pos) {
+    final upper = pos.toUpperCase();
+    return upper.contains('ATA') || upper.contains('ATT') || upper.contains('CENTROAVANTE') || upper.contains('PONT') || upper.contains('MEI-AT');
+  }
+
+  String _getPosDesc(String pos) {
+    if (pos.toUpperCase().contains('GOL')) return 'Goleiro';
+    if (_isDef(pos)) return 'Defensor';
+    if (_isMid(pos)) return 'Meio-campista';
+    return 'Atacante';
+  }
+
+  List<MatchStatItem> _buildStatsFromDb() {
+    final homeStats = EventsApi.matchStats.where((s) => s.teamId == 'home').toList();
+    final awayStats = EventsApi.matchStats.where((s) => s.teamId == 'away').toList();
+
+    if (homeStats.isEmpty && awayStats.isEmpty) return [];
+
+    final statTypes = [
+      'Posse de Bola',
+      'Finalizações',
+      'Faltas',
+      'Escanteios',
+      'Cartões Amarelos',
+      'Cartões Vermelhos',
+      'Desarmes',
+      'Defesas',
+      'Passes',
+    ];
+
+    final List<MatchStatItem> result = [];
+
+    for (final type in statTypes) {
+      final homeStat = homeStats.firstWhere((s) => s.statType == type, orElse: () => FixtureStatModel(id: '', fixtureId: '', fixtureExternalId: 0, teamId: 'home', statType: type, statValue: '0'));
+      final awayStat = awayStats.firstWhere((s) => s.statType == type, orElse: () => FixtureStatModel(id: '', fixtureId: '', fixtureExternalId: 0, teamId: 'away', statType: type, statValue: '0'));
+
+      final homeClean = homeStat.statValue.replaceAll('%', '').trim();
+      final awayClean = awayStat.statValue.replaceAll('%', '').trim();
+
+      int homeVal = int.tryParse(homeClean) ?? 0;
+      int awayVal = int.tryParse(awayClean) ?? 0;
+
+      if (type == 'Posse de Bola' && homeVal == 0 && awayVal == 0) {
+        homeVal = 50;
+        awayVal = 50;
+      }
+
+      result.add(MatchStatItem(
+        label: type,
+        homeVal: homeVal,
+        awayVal: awayVal,
+        isPercentage: type == 'Posse de Bola',
+      ));
+    }
+
+    return result;
   }
 }
 
