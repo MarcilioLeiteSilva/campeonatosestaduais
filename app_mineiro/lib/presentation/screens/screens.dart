@@ -28,6 +28,8 @@ import 'package:app_mineiro/api/news_api.dart';
 import 'package:app_mineiro/api/scorers_api.dart';
 import 'package:app_mineiro/models/scorers.dart';
 import 'package:app_mineiro/helpers/squads.dart';
+import 'package:app_mineiro/models/fixture_lineup.dart';
+import 'package:app_mineiro/models/fixture_stat.dart';
 
 part 'splash.dart';
 part 'user/welcome.dart';

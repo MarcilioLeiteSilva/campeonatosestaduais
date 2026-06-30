@@ -410,12 +410,12 @@ class _FixtureDetailsState extends State<FixtureDetails> {
       }
     }
 
-    final result = sortedStarters.map((p) => {
+    final result = sortedStarters.map<Map<String, String>>((p) => {
       'name': p.playerName,
       'position': _getPosDesc(p.playerPos),
     }).toList();
 
-    result.addAll(substitutes.map((p) => {
+    result.addAll(substitutes.map<Map<String, String>>((p) => {
       'name': p.playerName,
       'position': _getPosDesc(p.playerPos),
     }));
