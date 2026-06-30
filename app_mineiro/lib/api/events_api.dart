@@ -180,9 +180,7 @@ class EventsApi {
       final records = await pb.collection('fixture_comments').getFullList(
         filter: "fixtureId = '$fixtureId'",
       );
-      
-      // Mapear records e ordenar cronologicamente por tempo (decrescente ou crescente?)
-      // Tradicionalmente minutagem de lances ao vivo é exibida em ordem decrescente (do mais recente ao mais antigo)
+
       final parsed = records.map((record) {
         return FixtureCommentModel(
           id: record.id,
@@ -194,7 +192,6 @@ class EventsApi {
         );
       }).toList();
 
-      // Função auxiliar de ordenação por minuto
       int getMinVal(String timeStr) {
         final digits = timeStr.replaceAll(RegExp(r'\D'), '');
         return int.tryParse(digits) ?? 0;

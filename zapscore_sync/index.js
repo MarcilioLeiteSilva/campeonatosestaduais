@@ -453,20 +453,48 @@ async function syncFixtures(leagueId, season = 2026, isLiveWindow = false) {
 
       // Integração com ge.globo crawler para Campeonato Mineiro (Módulo 1 e 2)
       const isMineiroLeague = [629, 619].includes(leagueId) || [629, 619].includes(f.leagueId);
-      if (isMineiroLeague && pbFixtureId && isRecentOrLive) {
+      
+      // Para partidas finalizadas: sempre tentar se ainda não tiver comentários
+      // Para partidas ao vivo ou futuras: apenas na janela de 24h
+      const shouldRunCrawler = isMineiroLeague && pbFixtureId && (
+        (isFinished) || // sempre para finalizadas
+        (isRecentOrLive) // janela ao vivo/futuro
+      );
+      
+      if (shouldRunCrawler) {
         try {
-          const globoUrl = await mapFixtureToGloboUrl(homeRecord.name, awayRecord.name, f.date);
-          if (globoUrl) {
-            // 1. Sempre tenta sincronizar as escalações se ainda não estiver completo ou se for antes/início de jogo
-            const shouldSyncSquads = ['NS', '1H', 'HT', 'LIVE'].includes(statusAtual);
-            if (shouldSyncSquads) {
-              await fetchSquadsFromGlobo(pbFixtureId, f.externalId, globoUrl);
+          // Verifica se já tem comentários para não processar repetidamente finalizadas
+          let alreadyHasComments = false;
+          if (isFinished) {
+            const existingComments = await pb.collection('fixture_comments').getList(1, 1, {
+              filter: `fixtureId = '${pbFixtureId}'`
+            });
+            alreadyHasComments = existingComments.totalItems > 0;
+          }
+          
+          if (!alreadyHasComments) {
+            const globoUrl = await mapFixtureToGloboUrl(homeRecord.name, awayRecord.name, f.date);
+            if (globoUrl) {
+              // 1. Escalações para partidas futuras/ao vivo
+              const shouldSyncSquads = ['NS', '1H', 'HT', 'LIVE'].includes(statusAtual);
+              if (shouldSyncSquads) {
+                await fetchSquadsFromGlobo(pbFixtureId, f.externalId, globoUrl);
+              }
+              
+              // 2. Eventos, comentários e estatísticas para partidas iniciadas ou finalizadas
+              if (statusQueTemEventos.includes(statusAtual)) {
+                await syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeRecord.id, awayRecord.id, isLiveWindow);
+                await syncLiveStatsFromGlobo(pbFixtureId, f.externalId, globoUrl);
+              }
             }
-            
-            // 2. Se a partida iniciou ou finalizou, sincroniza eventos e estatísticas em tempo real
-            if (statusQueTemEventos.includes(statusAtual)) {
-              await syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeRecord.id, awayRecord.id, isLiveWindow);
-              await syncLiveStatsFromGlobo(pbFixtureId, f.externalId, globoUrl);
+          } else {
+            // Partida já tem comentários; se estiver ao vivo, ainda atualiza
+            if (isLive) {
+              const globoUrl = await mapFixtureToGloboUrl(homeRecord.name, awayRecord.name, f.date);
+              if (globoUrl) {
+                await syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeRecord.id, awayRecord.id, isLiveWindow);
+                await syncLiveStatsFromGlobo(pbFixtureId, f.externalId, globoUrl);
+              }
             }
           }
         } catch (crawlerErr) {
