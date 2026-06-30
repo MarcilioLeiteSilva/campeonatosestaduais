@@ -25,6 +25,8 @@ import 'package:app_mineiro/api/events_api.dart';
 import 'package:app_mineiro/api/leagues_api.dart';
 import 'package:app_mineiro/api/clubs_api.dart';
 import 'package:app_mineiro/api/news_api.dart';
+import 'package:app_mineiro/api/scorers_api.dart';
+import 'package:app_mineiro/models/scorers.dart';
 import 'package:app_mineiro/helpers/squads.dart';
 
 part 'splash.dart';
@@ -63,3 +65,5 @@ part 'settings/edit_info.dart';
 part 'settings/general.dart';
 part 'settings/notification.dart';
 part 'settings/security.dart';
+
+part 'home/scorers_details.dart';

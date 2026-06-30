@@ -248,24 +248,35 @@ class _FixturePageState extends State<FixturePage> {
                   if (isNormalRoundMode) _buildRoundsSelector(uniqueRounds),
                   Expanded(
                     child: displayMatches.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Text(
-                                state.showLiveOnly
-                                    ? 'Nenhuma partida ao vivo no momento.'
-                                    : (_isDateMode
-                                        ? 'Nenhuma partida encontrada nesta data.'
-                                        : 'Nenhuma partida encontrada nesta rodada.'),
-                                style: const TextStyle(color: Colors.grey),
-                              ),
+                        ? SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(40.0),
+                                  child: Text(
+                                    state.showLiveOnly
+                                        ? 'Nenhuma partida ao vivo no momento.'
+                                        : (_isDateMode
+                                            ? 'Nenhuma partida encontrada nesta data.'
+                                            : 'Nenhuma partida encontrada nesta rodada.'),
+                                    style: const TextStyle(color: Colors.grey),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                if (isNormalRoundMode) CardScorersPreview(leagueId: activeLeagueId),
+                              ],
                             ),
                           )
                         : ListView.separated(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            itemBuilder: (_, i) => CardFixtureItemReal(match: displayMatches[i]),
+                            itemCount: displayMatches.length + (isNormalRoundMode ? 1 : 0),
                             separatorBuilder: (_, __) => const Gap(10),
-                            itemCount: displayMatches.length,
+                            itemBuilder: (_, i) {
+                              if (i == displayMatches.length) {
+                                return CardScorersPreview(leagueId: activeLeagueId);
+                              }
+                              return CardFixtureItemReal(match: displayMatches[i]);
+                            },
                           ),
                   ),
                 ],
@@ -273,6 +284,158 @@ class _FixturePageState extends State<FixturePage> {
             },
           ),
         ),
+      ),
+    );
+  }
+}
+
+class CardScorersPreview extends StatelessWidget {
+  const CardScorersPreview({super.key, required this.leagueId});
+  final int leagueId;
+
+  @override
+  Widget build(BuildContext context) {
+    // e9z7nlg1797x2k5 -> 629 (Módulo 1)
+    // 43hvars4zd2n41g -> 619 (Módulo 2)
+    final String targetLeaguePbId = leagueId == 619 
+        ? '43hvars4zd2n41g' 
+        : 'e9z7nlg1797x2k5';
+
+    final list = ScorersApi.sListScorers
+        .where((s) => s.leagueId == targetLeaguePbId)
+        .toList();
+
+    list.sort((a, b) {
+      final cmp = a.rank.compareTo(b.rank);
+      if (cmp != 0) return cmp;
+      return b.goals.compareTo(a.goals);
+    });
+
+    final topThree = list.take(3).toList();
+
+    if (topThree.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 15),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: AppColor.card,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppColor.info),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.emoji_events, color: AppColor.primary, size: 20),
+                  Gap(8),
+                  Text(
+                    'ARTILHARIA',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: () => context.pushNamed(screenScorers),
+                child: const Row(
+                  children: [
+                    Text(
+                      'Ver todos',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColor.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Gap(4),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: AppColor.primary,
+                      size: 12,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const Gap(15),
+          ...topThree.map((item) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Row(
+                children: [
+                  // Rank
+                  Container(
+                    width: 25,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${item.rank}º',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: item.rank <= 3 ? AppColor.primary : Colors.white70,
+                      ),
+                    ),
+                  ),
+                  const Gap(8),
+                  // Foto
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: AppColor.info,
+                    backgroundImage: item.playerPhoto.isNotEmpty
+                        ? NetworkImage(item.playerPhoto)
+                        : null,
+                    child: item.playerPhoto.isEmpty
+                        ? const Icon(Icons.person, color: Colors.white70, size: 14)
+                        : null,
+                  ),
+                  const Gap(10),
+                  // Nome e Time
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.playerName,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          item.teamName,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Gols
+                  Text(
+                    '${item.goals} gol${item.goals > 1 ? 's' : ''}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ),
     );
   }

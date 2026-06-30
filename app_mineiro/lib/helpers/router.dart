@@ -16,6 +16,7 @@ const String screenTeam = 'team-profile';
 
 const String screenNewsContent = 'news-content';
 const String screenWatchContent = 'watch-content';
+const String screenScorers = 'scorers-details';
 
 const String screenAbout = "about-sett";
 const String screenEditInfo = "editinfo-sett";
@@ -110,6 +111,11 @@ abstract class RouterApp {
         path: '/$screenWatchContent',
         name: screenWatchContent,
         builder: (context, state) => const WatchContentScreen(),
+      ),
+      GoRoute(
+        path: '/$screenScorers',
+        name: screenScorers,
+        builder: (context, state) => const ScorersDetailsScreen(),
       ),
       GoRoute(
         path: '/$screenAbout',
