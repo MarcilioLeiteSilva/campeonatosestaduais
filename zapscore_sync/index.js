@@ -187,6 +187,17 @@ async function ensureCollectionsExist() {
         { name: 'statType', type: 'text', required: true },
         { name: 'statValue', type: 'text', required: true }
       ]
+    },
+    {
+      name: 'fixture_comments',
+      type: 'base',
+      schema: [
+        { name: 'fixtureId', type: 'text', required: true },
+        { name: 'time', type: 'text', required: true },
+        { name: 'period', type: 'text' },
+        { name: 'text', type: 'text', required: true },
+        { name: 'type', type: 'text' }
+      ]
     }
   ];
 
@@ -877,6 +888,20 @@ async function syncLiveStatsFromGlobo(pbFixtureId, fixtureExternalId, globoUrl) 
 }
 
 async function syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeId, awayId, isLiveWindow) {
+  const extractMinute = (momentStr) => {
+    if (!momentStr) return null;
+    if (momentStr.includes(':')) {
+      const parts = momentStr.split(':');
+      const min = parseInt(parts[0], 10);
+      return isNaN(min) ? null : `${min}'`;
+    }
+    if (momentStr.includes("'")) {
+      return momentStr;
+    }
+    const min = parseInt(momentStr, 10);
+    return isNaN(min) ? null : `${min}'`;
+  };
+
   try {
     console.log(`[Crawler] Buscando lances ge.globo de: ${globoUrl}`);
     const response = await axios.get(globoUrl, {
@@ -922,7 +947,45 @@ async function syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeId, awayId, is
     
     for (const play of plays) {
       if (!play || !play.type) continue;
-      
+
+      // 1. Sincronização de narrativa minuto a minuto (comentários)
+      const timeStr = extractMinute(play.moment);
+      if (timeStr) {
+        let commentText = '';
+        if (play.body && Array.isArray(play.body.blocks)) {
+          commentText = play.body.blocks.map(b => b.text || '').join('\n').trim();
+        }
+        if (!commentText && play.description) {
+          commentText = play.description.trim();
+        }
+        if (!commentText && play.title) {
+          commentText = play.title.trim();
+        }
+
+        if (commentText) {
+          let existingComment = null;
+          try {
+            const matches = await pb.collection('fixture_comments').getFullList({
+              filter: `fixtureId = '${pbFixtureId}' && time = '${timeStr}'`
+            });
+            existingComment = matches.find(m => m.text === commentText);
+          } catch (err) {}
+
+          if (!existingComment) {
+            const commentData = {
+              fixtureId: pbFixtureId,
+              time: timeStr,
+              period: play.period?.abbreviation || play.period?.label || '',
+              text: commentText,
+              type: play.type || 'text'
+            };
+            await pb.collection('fixture_comments').create(commentData);
+            console.log(`[Crawler] Novo comentário cadastrado: ${timeStr} - ${commentText.substring(0, 30)}...`);
+          }
+        }
+      }
+
+      // 2. Sincronização de eventos para notificações push e aba Resumo
       const type = play.type;
       const allowedTypes = ['gol', 'card', 'subst', 'substituicao', 'cartao'];
       if (!allowedTypes.includes(type.toLowerCase())) continue;

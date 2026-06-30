@@ -2,6 +2,7 @@ import 'package:app_mineiro/models/events.dart';
 import 'package:app_mineiro/models/fixture_event.dart';
 import 'package:app_mineiro/models/fixture_lineup.dart';
 import 'package:app_mineiro/models/fixture_stat.dart';
+import 'package:app_mineiro/models/fixture_comment.dart';
 import 'package:app_mineiro/services/pocketbase_client.dart';
 import 'package:intl/intl.dart';
 
@@ -168,6 +169,42 @@ class EventsApi {
     } catch (e) {
       print("Erro ao carregar estatísticas da partida: $e");
       matchStats = [];
+    }
+  }
+
+  static List<FixtureCommentModel> matchComments = [];
+
+  static Future<void> loadCommentsForFixture(String fixtureId) async {
+    try {
+      final pb = PocketBaseClient().client;
+      final records = await pb.collection('fixture_comments').getFullList(
+        filter: "fixtureId = '$fixtureId'",
+      );
+      
+      // Mapear records e ordenar cronologicamente por tempo (decrescente ou crescente?)
+      // Tradicionalmente minutagem de lances ao vivo é exibida em ordem decrescente (do mais recente ao mais antigo)
+      final parsed = records.map((record) {
+        return FixtureCommentModel(
+          id: record.id,
+          fixtureId: record.data['fixtureId'] ?? '',
+          time: record.data['time'] ?? '',
+          period: record.data['period'] ?? '',
+          text: record.data['text'] ?? '',
+          type: record.data['type'] ?? 'text',
+        );
+      }).toList();
+
+      // Função auxiliar de ordenação por minuto
+      int getMinVal(String timeStr) {
+        final digits = timeStr.replaceAll(RegExp(r'\D'), '');
+        return int.tryParse(digits) ?? 0;
+      }
+
+      parsed.sort((a, b) => getMinVal(b.time).compareTo(getMinVal(a.time)));
+      matchComments = parsed;
+    } catch (e) {
+      print("Erro ao carregar comentários da partida: $e");
+      matchComments = [];
     }
   }
 }

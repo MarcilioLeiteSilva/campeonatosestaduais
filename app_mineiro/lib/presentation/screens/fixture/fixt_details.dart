@@ -11,7 +11,7 @@ class FixtureDetails extends StatefulWidget {
 class _FixtureDetailsState extends State<FixtureDetails> {
   int indexTab = 0;
   bool isLoadingEvents = true;
-  List<String> tabs = ["Resumo", "Estatísticas", "Escalações", "Confrontos"];
+  List<String> tabs = ["Resumo", "Lances", "Estatísticas", "Escalações", "Confrontos"];
 
   @override
   void initState() {
@@ -28,6 +28,7 @@ class _FixtureDetailsState extends State<FixtureDetails> {
         EventsApi.loadEventsForFixture(widget.match.id),
         EventsApi.loadLineupsForFixture(widget.match.id),
         EventsApi.loadStatisticsForFixture(widget.match.id),
+        EventsApi.loadCommentsForFixture(widget.match.id),
       ]);
     }
     if (mounted) {
@@ -75,6 +76,7 @@ class _FixtureDetailsState extends State<FixtureDetails> {
           Expanded(
             child: [
               _buildSummaryTab(),
+              _buildCommentsTab(),
               _buildStatsTab(),
               _buildLineupsTab(),
               _buildEmptyTab("Nenhum confronto direto registrado para esta partida."),
@@ -120,6 +122,112 @@ class _FixtureDetailsState extends State<FixtureDetails> {
         ),
         const Gap(30),
       ],
+    );
+  }
+
+  Widget _buildCommentsTab() {
+    if (isLoadingEvents) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColor.primary),
+      );
+    }
+
+    if (EventsApi.matchComments.isEmpty) {
+      return _buildEmptyTab("Nenhum lance em tempo real disponível para esta partida.");
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+      itemCount: EventsApi.matchComments.length,
+      separatorBuilder: (_, __) => const Gap(16),
+      itemBuilder: (context, index) {
+        final comment = EventsApi.matchComments[index];
+
+        IconData icon = Icons.chat_bubble_outline;
+        Color iconColor = Colors.grey;
+        final txtLower = comment.text.toLowerCase();
+        final typeLower = comment.type.toLowerCase();
+
+        if (typeLower == 'gol' || txtLower.contains('gol de') || txtLower.contains('gol!')) {
+          icon = Icons.sports_soccer;
+          iconColor = Colors.green;
+        } else if (typeLower == 'card' || typeLower == 'cartao' || txtLower.contains('cartão amarelo') || txtLower.contains('cartao amarelo')) {
+          icon = Icons.style;
+          iconColor = Colors.yellow[700]!;
+        } else if (txtLower.contains('cartão vermelho') || txtLower.contains('cartao vermelho') || txtLower.contains('expulso')) {
+          icon = Icons.style;
+          iconColor = Colors.red;
+        } else if (typeLower == 'subst' || typeLower == 'substituicao' || txtLower.contains('substituição') || txtLower.contains('substituicao')) {
+          icon = Icons.swap_horiz;
+          iconColor = Colors.blue;
+        } else if (txtLower.contains('apita o árbitro') || txtLower.contains('apita o arbitro') || txtLower.contains('fim de papo') || txtLower.contains('fim de jogo')) {
+          icon = Icons.sports;
+          iconColor = Colors.orange;
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColor.card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColor.info.withOpacity(0.5)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColor.primary.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColor.primary.withOpacity(0.5)),
+                ),
+                child: Text(
+                  comment.time,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColor.primary,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const Gap(12),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(icon, color: iconColor, size: 18),
+              ),
+              const Gap(12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (comment.period.isNotEmpty) ...[
+                      Text(
+                        comment.period.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[500],
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const Gap(4),
+                    ],
+                    Text(
+                      comment.text,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
