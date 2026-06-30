@@ -300,7 +300,7 @@ async function syncTeams(leagueId) {
 /**
  * Busca partidas (fixtures) da ZapScore API de uma determinada liga e sincroniza
  */
-async function syncFixtures(leagueId, season = 2026) {
+async function syncFixtures(leagueId, season = 2026, isLiveWindow = false) {
   console.log(`Sincronizando partidas da liga ${leagueId} (Temporada ${season})...`);
   try {
     const response = await axios.get(`${zapscoreUrl}/fixtures?leagueId=${leagueId}&season=${season}&limit=200`);
@@ -369,40 +369,48 @@ async function syncFixtures(leagueId, season = 2026) {
           const oldAwayGoals = existingRecord.awayGoals;
           const newAwayGoals = f.awayGoals !== null ? f.awayGoals : null;
 
-          // 1. Detectar Início de Jogo (NS -> 1H ou similar)
-          if ((oldStatus === 'NS' || oldStatus === '') && (newStatus === '1H' || newStatus === 'LIVE' || f.elapsed > 0)) {
-            const title = `⏱️ JOGO INICIADO!`;
-            const body = `${homeRecord.name} vs ${awayRecord.name} começou no campeonato!`;
-            await sendPushNotification(homeRecord.name, 'placar', title, body);
-            await sendPushNotification(awayRecord.name, 'placar', title, body);
-            await sendMatchPushNotification(f.externalId, 'placar', title, body);
-          }
+          // Notificações apenas durante janela de jogo ao vivo
+          if (isLiveWindow) {
+            // 1. Detectar Início de Jogo (NS -> 1H ou similar)
+            if ((oldStatus === 'NS' || oldStatus === '') && (newStatus === '1H' || newStatus === 'LIVE' || f.elapsed > 0)) {
+              const title = `⏱️ JOGO INICIADO!`;
+              const body = `${homeRecord.name} vs ${awayRecord.name} começou no campeonato!`;
+              await sendPushNotification(homeRecord.name, 'placar', title, body);
+              await sendPushNotification(awayRecord.name, 'placar', title, body);
+              await sendMatchPushNotification(f.externalId, 'placar', title, body);
+            }
 
-          // 2. Detectar Fim de Jogo (Não era encerrado, e agora é: FT ou PEN ou AET)
-          const isOldFinished = oldStatus === 'FT' || oldStatus === 'PEN' || oldStatus === 'AET';
-          const isNewFinished = newStatus === 'FT' || newStatus === 'PEN' || newStatus === 'AET';
-          if (!isOldFinished && isNewFinished) {
-            const title = `🏁 FIM DE JOGO!`;
-            const body = `${homeRecord.name} ${newHomeGoals !== null ? newHomeGoals : 0} x ${newAwayGoals !== null ? newAwayGoals : 0} ${awayRecord.name} (Fim da partida)`;
-            await sendPushNotification(homeRecord.name, 'placar', title, body);
-            await sendPushNotification(awayRecord.name, 'placar', title, body);
-            await sendMatchPushNotification(f.externalId, 'placar', title, body);
-          }
+            // 2. Detectar Fim de Jogo (Não era encerrado, e agora é: FT ou PEN ou AET)
+            const isOldFinished = oldStatus === 'FT' || oldStatus === 'PEN' || oldStatus === 'AET';
+            const isNewFinished = newStatus === 'FT' || newStatus === 'PEN' || newStatus === 'AET';
+            if (!isOldFinished && isNewFinished) {
+              const title = `🏁 FIM DE JOGO!`;
+              const body = `${homeRecord.name} ${newHomeGoals !== null ? newHomeGoals : 0} x ${newAwayGoals !== null ? newAwayGoals : 0} ${awayRecord.name} (Fim da partida)`;
+              await sendPushNotification(homeRecord.name, 'placar', title, body);
+              await sendPushNotification(awayRecord.name, 'placar', title, body);
+              await sendMatchPushNotification(f.externalId, 'placar', title, body);
+            }
 
-          // 3. Detectar Alteração de Placar (Gols)
-          if (newHomeGoals !== null && oldHomeGoals !== null && newHomeGoals > oldHomeGoals) {
-            const title = `⚽ GOL DO ${homeRecord.name.toUpperCase()}!`;
-            const body = `Placar: ${homeRecord.name} ${newHomeGoals} x ${newAwayGoals !== null ? newAwayGoals : 0} ${awayRecord.name}`;
-            await sendPushNotification(homeRecord.name, 'gols', title, body);
-            await sendPushNotification(awayRecord.name, 'gols', title, body);
-            await sendMatchPushNotification(f.externalId, 'gols', title, body);
-          }
-          if (newAwayGoals !== null && oldAwayGoals !== null && newAwayGoals > oldAwayGoals) {
-            const title = `⚽ GOL DO ${awayRecord.name.toUpperCase()}!`;
-            const body = `Placar: ${homeRecord.name} ${newHomeGoals !== null ? newHomeGoals : 0} x ${newAwayGoals} ${awayRecord.name}`;
-            await sendPushNotification(homeRecord.name, 'gols', title, body);
-            await sendPushNotification(awayRecord.name, 'gols', title, body);
-            await sendMatchPushNotification(f.externalId, 'gols', title, body);
+            // 3. Detectar Alteração de Placar (Gols)
+            if (newHomeGoals !== null && oldHomeGoals !== null && newHomeGoals > oldHomeGoals) {
+              const title = `⚽ GOL DO ${homeRecord.name.toUpperCase()}!`;
+              const body = `Placar: ${homeRecord.name} ${newHomeGoals} x ${newAwayGoals !== null ? newAwayGoals : 0} ${awayRecord.name}`;
+              await sendPushNotification(homeRecord.name, 'gols', title, body);
+              await sendPushNotification(awayRecord.name, 'gols', title, body);
+              await sendMatchPushNotification(f.externalId, 'gols', title, body);
+            }
+            if (newAwayGoals !== null && oldAwayGoals !== null && newAwayGoals > oldAwayGoals) {
+              const title = `⚽ GOL DO ${awayRecord.name.toUpperCase()}!`;
+              const body = `Placar: ${homeRecord.name} ${newHomeGoals !== null ? newHomeGoals : 0} x ${newAwayGoals} ${awayRecord.name}`;
+              await sendPushNotification(homeRecord.name, 'gols', title, body);
+              await sendPushNotification(awayRecord.name, 'gols', title, body);
+              await sendMatchPushNotification(f.externalId, 'gols', title, body);
+            }
+          } else {
+            // Fora da janela ao vivo: apenas atualiza status sem notificar
+            const isOldFinished = oldStatus === 'FT' || oldStatus === 'PEN' || oldStatus === 'AET';
+            const isNewFinished = newStatus === 'FT' || newStatus === 'PEN' || newStatus === 'AET';
+            void isOldFinished; void isNewFinished; // suprime warning de lint
           }
 
           const updated = await pb.collection('fixtures').update(existingRecord.id, data);
@@ -448,14 +456,25 @@ async function syncFixtures(leagueId, season = 2026) {
           const eventsRes = await requestWithRetry(`${zapscoreUrl}/fixtures/events?fixtureId=${f.externalId}`);
           const events = eventsRes?.data;
           if (events && Array.isArray(events) && events.length > 0) {
-            await syncFixtureEvents(pbFixtureId, events, extHomeId, extAwayId);
+            await syncFixtureEvents(pbFixtureId, events, extHomeId, extAwayId, isLiveWindow);
             console.log(`Eventos sincronizados para partida ${f.externalId}: ${events.length} eventos.`);
           }
         } catch (evErr) {
           console.error(`Erro ao buscar eventos da partida ${f.externalId}:`, evErr.message);
         }
       }
-      // Nota: lineups e statistics não são disponibilizados pela ZapScore para o Campeonato Mineiro
+
+      // Verificar e notificar escalação confirmada (somente durante janela ao vivo)
+      if (isLiveWindow && pbFixtureId) {
+        await checkAndNotifyLineups(
+          pbFixtureId,
+          f.externalId,
+          homeRecord.name,
+          awayRecord.name,
+          f.statusShort || ''
+        );
+      }
+      // Nota: lineups e statistics podem não estar disponíveis pela ZapScore para o Campeonato Mineiro
     }
   } catch (error) {
     console.error(`Erro ao sincronizar partidas da liga ${leagueId}:`, error.message);
@@ -466,7 +485,7 @@ async function syncFixtures(leagueId, season = 2026) {
 /**
  * Sincroniza eventos de uma partida
  */
-async function syncFixtureEvents(pbFixtureId, events, homeId, awayId) {
+async function syncFixtureEvents(pbFixtureId, events, homeId, awayId, isLiveWindow = false) {
   for (const e of events) {
     let existingRecord = null;
     try {
@@ -494,37 +513,39 @@ async function syncFixtureEvents(pbFixtureId, events, homeId, awayId) {
     if (!existingRecord) {
       await pb.collection('fixture_events').create(data);
 
-      // Enviar notificações para novos eventos (Substituições e Cartões Vermelhos)
-      try {
-        const fixture = await pb.collection('fixtures').getOne(pbFixtureId, { expand: 'homeTeamId,awayTeamId' });
-        const homeName = fixture.expand.homeTeamId.name;
-        const awayName = fixture.expand.awayTeamId.name;
-        const eventTeamName = e.team?.name === 'home' || e.team?.id === homeId ? homeName : awayName;
+      // Enviar notificações apenas durante janela ao vivo
+      if (isLiveWindow) {
+        try {
+          const fixture = await pb.collection('fixtures').getOne(pbFixtureId, { expand: 'homeTeamId,awayTeamId' });
+          const homeName = fixture.expand.homeTeamId.name;
+          const awayName = fixture.expand.awayTeamId.name;
+          const eventTeamName = e.team?.name === 'home' || e.team?.id === homeId ? homeName : awayName;
 
-        const minutes = e.time?.elapsed || 0;
-        const player = e.player?.name || '';
-        const assist = e.assist?.name || '';
+          const minutes = e.time?.elapsed || 0;
+          const player = e.player?.name || '';
+          const assist = e.assist?.name || '';
 
-        // 1. Substituição (subst)
-        if (e.type === 'subst' || e.type?.toLowerCase() === 'subst') {
-          const title = `🔄 Substituição no ${eventTeamName}`;
-          const body = `(${minutes}') Sai: ${assist || 'Jogador'}, Entra: ${player}`;
-          await sendPushNotification(homeName, 'substituicoes', title, body);
-          await sendPushNotification(awayName, 'substituicoes', title, body);
-          await sendMatchPushNotification(fixture.externalId, 'substituicoes', title, body);
+          // 1. Substituição (subst)
+          if (e.type === 'subst' || e.type?.toLowerCase() === 'subst') {
+            const title = `🔄 Substituição no ${eventTeamName}`;
+            const body = `(${minutes}') Sai: ${assist || 'Jogador'}, Entra: ${player}`;
+            await sendPushNotification(homeName, 'substituicoes', title, body);
+            await sendPushNotification(awayName, 'substituicoes', title, body);
+            await sendMatchPushNotification(fixture.externalId, 'substituicoes', title, body);
+          }
+
+          // 2. Cartão Vermelho (Red Card)
+          if ((e.type === 'Card' || e.type?.toLowerCase() === 'card') &&
+              (e.detail?.toLowerCase().includes('red') || e.detail?.toLowerCase() === 'red card')) {
+            const title = `🟥 CARTÃO VERMELHO!`;
+            const body = `(${minutes}') ${player} do ${eventTeamName} foi expulso do jogo!`;
+            await sendPushNotification(homeName, 'cartoes', title, body);
+            await sendPushNotification(awayName, 'cartoes', title, body);
+            await sendMatchPushNotification(fixture.externalId, 'cartoes', title, body);
+          }
+        } catch (err) {
+          console.error('Erro ao despachar notificação para evento de jogo:', err.message);
         }
-
-        // 2. Cartão Vermelho (Red Card)
-        if ((e.type === 'Card' || e.type?.toLowerCase() === 'card') && 
-            (e.detail?.toLowerCase().includes('red') || e.detail?.toLowerCase() === 'red card')) {
-          const title = `🟥 CARTÃO VERMELHO!`;
-          const body = `(${minutes}') ${player} do ${eventTeamName} foi expulso do jogo!`;
-          await sendPushNotification(homeName, 'cartoes', title, body);
-          await sendPushNotification(awayName, 'cartoes', title, body);
-          await sendMatchPushNotification(fixture.externalId, 'cartoes', title, body);
-        }
-      } catch (err) {
-        console.error("Erro ao despachar notificação para evento de jogo:", err.message);
       }
     }
   }
@@ -660,36 +681,218 @@ async function syncFixtureStatistics(pbFixtureId, fixtureExternalId) {
 }
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTROLE DE ESTADO GLOBAL DO CICLO
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Timestamp da última sincronização de dados estáticos (competições e times) */
+let lastStaticSyncAt = null;
+
+/** Intervalo mínimo para dados estáticos: 24 horas */
+const STATIC_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+/** Janela de ativação antes do jogo (em minutos) */
+const PRE_MATCH_WINDOW_MIN = 30;
+
+/** Janela de ativação após o jogo (em minutos) */
+const POST_MATCH_WINDOW_MIN = 30;
+
+/** Intervalo de sincronização durante janela ao vivo: 1 minuto */
+const LIVE_INTERVAL_MS = 1 * 60 * 1000;
+
+/** Intervalo de sincronização fora de janela ao vivo: 1 hora */
+const IDLE_INTERVAL_MS = 60 * 60 * 1000;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DETECÇÃO DA JANELA DE JOGO AO VIVO
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Função principal de execução periódica
+ * Consulta o PocketBase para verificar se existe partida ativa, prestes a começar
+ * ou recentemente encerrada (dentro das janelas PRÉ/PÓS-jogo configuradas).
+ * Retorna { isLive: bool, reason: string }
  */
-async function startSync() {
+async function detectLiveWindow() {
   try {
-    await authenticate();
-    await ensureCollectionsExist();
+    const now = new Date();
+    const allFixtures = await pb.collection('fixtures').getFullList({
+      filter: `season = 2026`,
+      fields: 'id,statusShort,date,elapsed',
+    });
 
-    // Sincroniza ligas
-    await syncCompetitions();
+    for (const f of allFixtures) {
+      const status = f.statusShort || '';
+      const matchDate = f.date ? new Date(f.date) : null;
 
-    // Sincroniza times e fixtures das ligas 629 (Módulo 1) e 619 (Módulo 2)
-    const ligas = [629, 619];
-    for (const id of ligas) {
-      await syncTeams(id);
-      await syncFixtures(id, 2026);
+      // Partida em andamento agora
+      const isLiveStatus = ['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE'].includes(status);
+      if (isLiveStatus) {
+        return { isLive: true, reason: `Partida ao vivo (status=${status})` };
+      }
+
+      if (matchDate) {
+        const diffMin = (now - matchDate) / 60000;
+
+        // Partida prestes a começar (dentro da janela PRÉ-jogo)
+        if (status === 'NS' && diffMin >= -PRE_MATCH_WINDOW_MIN && diffMin <= 0) {
+          return { isLive: true, reason: `Partida começa em ${Math.round(-diffMin)} min` };
+        }
+
+        // Partida recém-encerrada (dentro da janela PÓS-jogo)
+        const isFinishedStatus = ['FT', 'AET', 'PEN'].includes(status);
+        if (isFinishedStatus && diffMin >= 0 && diffMin <= (90 + POST_MATCH_WINDOW_MIN)) {
+          return { isLive: true, reason: `Partida encerrada há ~${Math.round(diffMin - 90)} min (janela pós-jogo)` };
+        }
+      }
     }
 
-    console.log("Sincronização concluída com sucesso!");
-  } catch (error) {
-    console.error("Falha geral no processo de sincronização:", error.message);
+    return { isLive: false, reason: 'Sem janela de jogo ativa' };
+  } catch (e) {
+    console.warn('Erro ao detectar janela de jogo ao vivo:', e.message);
+    return { isLive: false, reason: 'Erro na detecção (fallback IDLE)' };
   }
 }
 
-// Execução inicial
-startSync();
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTROLE DE NOTIFICAÇÃO DE ESCALAÇÃO
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Executa periodicamente a cada 10 minutos
-const SYNC_INTERVAL = 10 * 60 * 1000;
-setInterval(() => {
-  console.log("Iniciando ciclo de sincronização agendado...");
-  startSync();
-}, SYNC_INTERVAL);
+/**
+ * Verifica se as escalações de uma partida acabaram de ser disponibilizadas
+ * e, se sim, envia notificação push para os torcedores dos dois times.
+ * O PocketBase já deve ter os dados de lineup atualizados antes de chamar isso.
+ */
+async function checkAndNotifyLineups(pbFixtureId, fixtureExternalId, homeTeamName, awayTeamName, statusShort) {
+  try {
+    // Só notifica se a partida ainda não começou ou está na janela pré-jogo
+    const activeStatuses = ['NS', '1H', 'HT'];
+    if (!activeStatuses.includes(statusShort)) return;
+
+    const lineups = await pb.collection('fixture_lineups').getList(1, 1, {
+      filter: `fixtureId = '${pbFixtureId}'`,
+    });
+
+    if (lineups.totalItems === 0) return; // Sem escalação ainda
+
+    // Verifica se já enviamos notificação (usando um campo de controle ou checando quantidade mínima)
+    // Estratégia: verificar se há pelo menos 11 jogadores de um time (escalação completa)
+    const allLineups = await pb.collection('fixture_lineups').getFullList({
+      filter: `fixtureId = '${pbFixtureId}' && isSubstitute = false`,
+    });
+
+    if (allLineups.length < 11) return; // Escalação incompleta, aguardar
+
+    // Verifica se a notificação já foi enviada (usando campo sentLineupNotif na fixture)
+    const fixture = await pb.collection('fixtures').getOne(pbFixtureId, { fields: 'id,sentLineupNotif' });
+    if (fixture.sentLineupNotif) return; // Já enviada anteriormente
+
+    // Envia a notificação para ambos os times
+    const title = `📋 Escalação Confirmada!`;
+    const body = `A escalação de ${homeTeamName} vs ${awayTeamName} está definida! Confira quem vai a campo.`;
+
+    await sendPushNotification(homeTeamName, 'placar', title, body);
+    await sendPushNotification(awayTeamName, 'placar', title, body);
+    await sendMatchPushNotification(fixtureExternalId, 'placar', title, body);
+
+    // Marca que a notificação de escalação foi enviada
+    await pb.collection('fixtures').update(pbFixtureId, { sentLineupNotif: true });
+
+    console.log(`📋 Notificação de escalação enviada para partida ${fixtureExternalId}.`);
+  } catch (e) {
+    // sentLineupNotif pode não existir ainda na coleção — ignorar silenciosamente
+    if (!e.message?.includes('sentLineupNotif')) {
+      console.warn(`Erro ao verificar/notificar escalação da partida ${fixtureExternalId}:`, e.message);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CICLO PRINCIPAL DE SINCRONIZAÇÃO
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Sincroniza dados estáticos (competições e times) apenas se passaram 24h.
+ */
+async function syncStaticDataIfNeeded() {
+  const now = Date.now();
+  if (lastStaticSyncAt && (now - lastStaticSyncAt) < STATIC_SYNC_INTERVAL_MS) {
+    console.log('Dados estáticos (competições/times): já atualizados hoje, pulando.');
+    return;
+  }
+
+  console.log('Sincronizando dados estáticos (competições e times)...');
+  await syncCompetitions();
+  const ligas = [629, 619];
+  for (const id of ligas) {
+    await syncTeams(id);
+  }
+
+  lastStaticSyncAt = now;
+  console.log('Dados estáticos sincronizados e cache renovado por 24h.');
+}
+
+/**
+ * Sincroniza partidas e eventos dinâmicos das ligas ativas.
+ * As notificações de eventos são disparadas APENAS durante a janela ao vivo.
+ */
+async function syncDynamicData(isLiveWindow) {
+  const ligas = [629, 619];
+  for (const id of ligas) {
+    await syncFixtures(id, 2026, isLiveWindow);
+  }
+}
+
+/**
+ * Função principal de um ciclo completo de sincronização.
+ * @param {boolean} isLiveWindow - Se verdadeiro, notificações de eventos são enviadas.
+ */
+async function runSyncCycle(isLiveWindow) {
+  try {
+    console.log(`\n═══════════════════════════════════════════════`);
+    console.log(`🔄 Ciclo de sincronização [${isLiveWindow ? '⚡ AO VIVO' : '💤 NORMAL'}]`);
+    console.log(`═══════════════════════════════════════════════`);
+
+    await authenticate();
+    await ensureCollectionsExist();
+
+    // Dados estáticos: somente 1x por dia
+    await syncStaticDataIfNeeded();
+
+    // Dados dinâmicos: sempre, passando flag de janela ao vivo para controle de notificações
+    await syncDynamicData(isLiveWindow);
+
+    console.log('✅ Ciclo de sincronização concluído com sucesso!\n');
+  } catch (error) {
+    console.error('❌ Falha geral no ciclo de sincronização:', error.message);
+  }
+}
+
+/**
+ * Loop adaptativo: determina o intervalo do próximo ciclo baseado na
+ * detecção de jogos ao vivo e agenda o próximo setTimeout automaticamente.
+ */
+async function scheduledLoop() {
+  // Detecta se estamos dentro de uma janela de jogo
+  const { isLive, reason } = await detectLiveWindow();
+
+  // Executa o ciclo de sincronização
+  await runSyncCycle(isLive);
+
+  // Re-detecta após o ciclo (o status pode ter mudado durante a execução)
+  const { isLive: isLiveAfter, reason: reasonAfter } = await detectLiveWindow();
+
+  const nextInterval = isLiveAfter ? LIVE_INTERVAL_MS : IDLE_INTERVAL_MS;
+  const nextLabel = isLiveAfter ? '1 minuto ⚡' : '1 hora 💤';
+
+  console.log(`⏱  Próximo ciclo em ${nextLabel} — Motivo: ${reasonAfter}`);
+  setTimeout(scheduledLoop, nextInterval);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENTRADA DO SCRIPT
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Inicialização: executa imediatamente, depois o loop auto-agenda
+console.log('🚀 Iniciando zapscore_sync com agendamento dinâmico...');
+scheduledLoop();
+

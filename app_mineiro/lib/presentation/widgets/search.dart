@@ -193,20 +193,41 @@ class PageSearchTeams extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final teams = ClubsApi.cListClubs;
+    if (teams.isEmpty) {
+      return const Center(
+        child: Text(
+          'Nenhum time encontrado.',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
       itemBuilder: (_, i) {
+        final team = teams[i];
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 5),
           decoration: BoxDecoration(
             color: AppColor.card,
             borderRadius: BorderRadius.circular(15),
           ),
-          child: const CardFollowItem(),
+          child: CardFollowItemReal(
+            team: team,
+            onTap: () {
+              context.pushNamed(
+                screenTeam,
+                extra: {
+                  'name': team.name,
+                  'logo': team.logo,
+                },
+              );
+            },
+          ),
         );
       },
       separatorBuilder: (_, i) => const Gap(10),
-      itemCount: 15,
+      itemCount: teams.length,
     );
   }
 }

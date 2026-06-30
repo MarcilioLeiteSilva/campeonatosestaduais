@@ -94,10 +94,10 @@ abstract class RouterApp {
         path: '/$screenTeam',
         name: screenTeam,
         builder: (context, state) {
-          final extra = state.extra as Map<String, String>;
+          final extra = state.extra as Map<dynamic, dynamic>;
           return TeamProfileScreen(
-            teamName: extra['name']!,
-            teamLogo: extra['logo']!,
+            teamName: extra['name']?.toString() ?? '',
+            teamLogo: extra['logo']?.toString() ?? '',
           );
         },
       ),

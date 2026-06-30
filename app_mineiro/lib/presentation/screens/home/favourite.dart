@@ -161,7 +161,13 @@ class _FavoritePageState extends State<FavoritePage> {
                             child: CardFollowItemReal(
                               team: team,
                               onTap: () {
-                                // Opcional: ir para tela de perfil do time
+                                context.pushNamed(
+                                  screenTeam,
+                                  extra: {
+                                    'name': team.name,
+                                    'logo': team.logo,
+                                  },
+                                );
                               },
                             ),
                           );
