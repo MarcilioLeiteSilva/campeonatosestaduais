@@ -86,6 +86,13 @@ class _FixtureDetailsState extends State<FixtureDetails> {
   }
 
   Widget _buildLineupsTab() {
+    final bool isFuture = widget.match.dateTime != null && widget.match.dateTime!.isAfter(DateTime.now());
+    final bool hasStarted = (widget.match.scoreHome != null && widget.match.scoreAway != null) || (widget.match.elapsed != null && widget.match.elapsed! > 0);
+    
+    if ((isFuture || !hasStarted) && EventsApi.matchLineups.isEmpty) {
+      return _buildEmptyTab("Escalações ainda não disponíveis para esta partida.");
+    }
+
     List<Map<String, String>> homeSquad;
     List<Map<String, String>> awaySquad;
 
