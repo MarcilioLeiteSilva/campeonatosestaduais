@@ -5,6 +5,7 @@ import admin from 'firebase-admin';
 import { getMessaging } from 'firebase-admin/messaging';
 import fs from 'fs';
 import vm from 'vm';
+import { fetchPlacarMatchData, fetchFIMatchData, fetchEspnMatchData, mergeFixtureInfo, mergeFixtureEvents } from './helpers.js';
 
 dotenv.config();
 
@@ -449,13 +450,9 @@ async function syncFixtures(leagueId, season = 2026, isLiveWindow = false) {
       const now = new Date();
       const diffMs = now - matchDate;
       const diffHours = diffMs / (1000 * 60 * 60);
-      const isRecentOrLive = diffHours < 24 && diffHours > -2; // iniciou de 2h no futuro a 24h no passado
-
-      // Integração com ge.globo crawler para Campeonato Mineiro (Módulo 1 e 2)
+         // Integração multi-fonte para Campeonato Mineiro (Módulo 1 e 2)
       const isMineiroLeague = [629, 619].includes(leagueId) || [629, 619].includes(f.leagueId);
       
-      // Para partidas finalizadas: sempre tentar se ainda não tiver comentários
-      // Para partidas ao vivo ou futuras: apenas na janela de 24h
       const shouldRunCrawler = isMineiroLeague && pbFixtureId && (
         (isFinished) || // sempre para finalizadas
         (isRecentOrLive) // janela ao vivo/futuro
@@ -463,7 +460,7 @@ async function syncFixtures(leagueId, season = 2026, isLiveWindow = false) {
       
       if (shouldRunCrawler) {
         try {
-          // Verifica se já tem comentários para não processar repetidamente finalizadas
+          // Verifica se já tem comentários no banco
           let alreadyHasComments = false;
           if (isFinished) {
             const existingComments = await pb.collection('fixture_comments').getList(1, 1, {
@@ -472,33 +469,154 @@ async function syncFixtures(leagueId, season = 2026, isLiveWindow = false) {
             alreadyHasComments = existingComments.totalItems > 0;
           }
           
-          if (!alreadyHasComments) {
+          const collectedSources = [];
+          let globoEvents = [];
+          
+          // 1. ge.globo (Scraper)
+          if (!alreadyHasComments || isLive) {
             const globoUrl = await mapFixtureToGloboUrl(homeRecord.name, awayRecord.name, f.date);
             if (globoUrl) {
-              // 1. Escalações para partidas futuras/ao vivo
               const shouldSyncSquads = ['NS', '1H', 'HT', 'LIVE'].includes(statusAtual);
               if (shouldSyncSquads) {
                 await fetchSquadsFromGlobo(pbFixtureId, f.externalId, globoUrl);
               }
               
-              // 2. Eventos, comentários e estatísticas para partidas iniciadas ou finalizadas
               if (statusQueTemEventos.includes(statusAtual)) {
-                await syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeRecord.id, awayRecord.id, isLiveWindow);
+                await syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeRecord.externalId, awayRecord.externalId, isLiveWindow);
                 await syncLiveStatsFromGlobo(pbFixtureId, f.externalId, globoUrl);
+                
+                // Read what ge.globo inserted to merge/deduplicate with other sources
+                const dbEvents = await pb.collection('fixture_events').getFullList({
+                  filter: `fixtureId = '${pbFixtureId}'`
+                });
+                globoEvents = dbEvents.map(e => ({
+                  time: e.time,
+                  teamSide: e.teamId === homeRecord.externalId ? 'home' : 'away',
+                  player: e.player,
+                  assist: e.assist,
+                  type: e.type,
+                  detail: e.detail
+                }));
               }
             }
-          } else {
-            // Partida já tem comentários; se estiver ao vivo, ainda atualiza
-            if (isLive) {
-              const globoUrl = await mapFixtureToGloboUrl(homeRecord.name, awayRecord.name, f.date);
-              if (globoUrl) {
-                await syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeRecord.id, awayRecord.id, isLiveWindow);
-                await syncLiveStatsFromGlobo(pbFixtureId, f.externalId, globoUrl);
+          }
+          
+          // 2. Placar de Futebol (Scraper)
+          const placarLeagueSlug = (leagueId === 619 || f.leagueId === 619) ? 'mineiro-modulo-2' : 'campeonato-mineiro';
+          const placarData = await fetchPlacarMatchData(homeRecord.name, awayRecord.name, f.date, placarLeagueSlug);
+          if (placarData) {
+            console.log(`[MultiSource] Placar de Futebol carregado para ${homeRecord.name} x ${awayRecord.name}`);
+            collectedSources.push(placarData);
+          }
+          
+          // 3. Futebol Interior (Live Scraper)
+          if (isLive) {
+            const fiData = await fetchFIMatchData(homeRecord.name, awayRecord.name);
+            if (fiData) {
+              console.log(`[MultiSource] Futebol Interior carregado para ${homeRecord.name} x ${awayRecord.name}`);
+              collectedSources.push(fiData);
+            }
+          }
+          
+          // 4. ESPN API (Scoreboard, only for Módulo 1)
+          if (leagueId === 629 || f.leagueId === 629) {
+            const espnData = await fetchEspnMatchData(homeRecord.name, awayRecord.name, f.date, 'bra.camp.mineiro');
+            if (espnData) {
+              console.log(`[MultiSource] ESPN carregado para ${homeRecord.name} x ${awayRecord.name}`);
+              collectedSources.push(espnData);
+            }
+          }
+          
+          // 5. ZapScore API / API-Sports
+          try {
+            const eventsRes = await requestWithRetry(`${zapscoreUrl}/fixtures/events?fixtureId=${f.externalId}`);
+            const apiEvents = eventsRes?.data;
+            if (apiEvents && Array.isArray(apiEvents) && apiEvents.length > 0) {
+              const normalizedApiEvents = apiEvents.map(e => ({
+                time: e.time?.elapsed || 0,
+                teamSide: e.team?.id === extHomeId || e.team?.name === 'home' ? 'home' : 'away',
+                player: e.player?.name || '',
+                assist: e.assist?.name || '',
+                type: e.type || '',
+                detail: e.detail || ''
+              }));
+              collectedSources.push({
+                source: 'ZapScore API',
+                homeGoals: f.homeGoals,
+                awayGoals: f.awayGoals,
+                events: normalizedApiEvents
+              });
+            }
+          } catch (apiErr) {
+            // Ignore API failures quietly
+          }
+          
+          // --- Consolidate & Merge Data ---
+          if (collectedSources.length > 0) {
+            // A. Merge scores and match status
+            const mergedInfo = mergeFixtureInfo(
+              { homeGoals: f.homeGoals, awayGoals: f.awayGoals, statusShort: statusAtual, elapsed: f.elapsed },
+              collectedSources
+            );
+            
+            if (mergedInfo.homeGoals !== f.homeGoals || mergedInfo.awayGoals !== f.awayGoals || mergedInfo.statusShort !== statusAtual) {
+              console.log(`[Consolidation] Atualizando placar da partida ${f.externalId}: ${f.homeGoals}x${f.awayGoals} -> ${mergedInfo.homeGoals}x${mergedInfo.awayGoals} | Status: ${statusAtual} -> ${mergedInfo.statusShort}`);
+              await pb.collection('fixtures').update(pbFixtureId, {
+                homeGoals: mergedInfo.homeGoals,
+                awayGoals: mergedInfo.awayGoals,
+                statusShort: mergedInfo.statusShort,
+                elapsed: mergedInfo.elapsed
+              });
+              
+              // Update local loop reference
+              f.homeGoals = mergedInfo.homeGoals;
+              f.awayGoals = mergedInfo.awayGoals;
+            }
+            
+            // B. Merge events (Deduplicate)
+            const allEventsLists = [];
+            if (globoEvents.length > 0) allEventsLists.push(globoEvents);
+            for (const s of collectedSources) {
+              if (s.events && s.events.length > 0) {
+                allEventsLists.push(s.events);
+              }
+            }
+            
+            if (allEventsLists.length > 0) {
+              const mergedEvents = mergeFixtureEvents(allEventsLists);
+              const currentDbEvents = await pb.collection('fixture_events').getFullList({
+                filter: `fixtureId = '${pbFixtureId}'`
+              });
+              
+              for (const e of mergedEvents) {
+                const exists = currentDbEvents.some(dbE => {
+                  const timeDiff = Math.abs(dbE.time - e.time);
+                  const sameTime = timeDiff <= 1;
+                  const sameSide = (dbE.teamId === homeRecord.externalId && e.teamSide === 'home') || (dbE.teamId === awayRecord.externalId && e.teamSide === 'away');
+                  const sameType = dbE.type?.toLowerCase() === e.type?.toLowerCase();
+                  return sameTime && sameSide && sameType;
+                });
+                
+                if (!exists) {
+                  const eventData = {
+                    fixtureId: pbFixtureId,
+                    time: e.time,
+                    teamId: e.teamSide === 'home' ? homeRecord.externalId : awayRecord.externalId,
+                    player: e.player || '',
+                    assist: e.assist || '',
+                    type: e.type || '',
+                    detail: e.detail || '',
+                    playerPhoto: '',
+                    externalPlayerId: null
+                  };
+                  await pb.collection('fixture_events').create(eventData);
+                  console.log(`[Consolidation] Adicionado evento consolidado ${e.time}': ${e.type} (${e.player})`);
+                }
               }
             }
           }
         } catch (crawlerErr) {
-          console.error(`[Crawler] Erro no crawler ge.globo para a partida ${f.externalId}:`, crawlerErr.message);
+          console.error(`[Crawler] Erro no crawler consolidado para a partida ${f.externalId}:`, crawlerErr.message);
         }
       }
 
@@ -993,8 +1111,9 @@ async function syncLiveEventsFromGlobo(pbFixtureId, globoUrl, homeId, awayId, is
         if (commentText) {
           let existingComment = null;
           try {
+            const escapedTime = timeStr.replace(/'/g, "\\'");
             const matches = await pb.collection('fixture_comments').getFullList({
-              filter: `fixtureId = '${pbFixtureId}' && time = '${timeStr}'`
+              filter: `fixtureId = '${pbFixtureId}' && time = '${escapedTime}'`
             });
             existingComment = matches.find(m => m.text === commentText);
           } catch (err) {}

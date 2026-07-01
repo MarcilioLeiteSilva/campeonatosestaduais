@@ -1,7 +1,8 @@
 /**
  * backfill_comments.js
  * Processa retroativamente todas as partidas finalizadas do Módulo 1 e 2 
- * que ainda não têm comentários no banco.
+ * utilizando ge.globo, Placar de Futebol e ESPN para preencher lances,
+ * eventos e placares consolidados.
  * 
  * Execute com: node backfill_comments.js
  */
@@ -10,6 +11,15 @@ import PocketBase from 'pocketbase';
 import axios from 'axios';
 import vm from 'vm';
 import dotenv from 'dotenv';
+import { 
+  normalizeTeamName, 
+  formatDateDMY, 
+  fetchPlacarMatchData, 
+  fetchEspnMatchData, 
+  mergeFixtureInfo, 
+  mergeFixtureEvents 
+} from './helpers.js';
+
 dotenv.config();
 
 const pb = new PocketBase(process.env.POCKETBASE_URL);
@@ -28,7 +38,7 @@ const extractMinute = (momentStr) => {
   return isNaN(min) ? null : `${min}'`;
 };
 
-// ── URL BUILDER ──────────────────────────────────────────────────────────────
+// ── URL BUILDER (ge.globo) ───────────────────────────────────────────────────
 const TEAM_SLUG_MAP = {
   'Atlético Mineiro': 'atletico-mg',
   'Atletico Mineiro': 'atletico-mg',
@@ -75,8 +85,6 @@ function getTeamSlug(name) {
 async function findGloboUrl(homeTeamName, awayTeamName, dateStr) {
   const homeSlug = getTeamSlug(homeTeamName);
   const awaySlug = getTeamSlug(awayTeamName);
-  
-  // Parse date
   const d = new Date(dateStr);
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -126,12 +134,10 @@ async function findGloboUrl(homeTeamName, awayTeamName, dateStr) {
   return null;
 }
 
-// ── COMMENT SCRAPER ───────────────────────────────────────────────────────────
+// ── COMMENT SCRAPER (ge.globo) ───────────────────────────────────────────────
 async function scrapeAndSaveComments(pbFixtureId, globoUrl) {
   const response = await axios.get(globoUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    },
+    headers: { 'User-Agent': 'Mozilla/5.0' },
     timeout: 12000
   });
 
@@ -146,10 +152,7 @@ async function scrapeAndSaveComments(pbFixtureId, globoUrl) {
     }
   }
 
-  if (!trv2Script) {
-    console.log('  ⚠ Nenhum window.trv2 encontrado');
-    return 0;
-  }
+  if (!trv2Script) return [];
 
   const sandbox = { window: {} };
   sandbox.window.window = sandbox.window;
@@ -157,13 +160,10 @@ async function scrapeAndSaveComments(pbFixtureId, globoUrl) {
   vm.runInContext(trv2Script, sandbox);
 
   const trv2 = sandbox.window.trv2;
-  if (!trv2 || !trv2.plays) {
-    console.log('  ⚠ Sem plays no window.trv2');
-    return 0;
-  }
+  if (!trv2 || !trv2.plays) return [];
 
   const plays = Array.isArray(trv2.plays) ? trv2.plays : Object.values(trv2.plays);
-  let inserted = 0;
+  const events = [];
 
   for (const play of plays) {
     if (!play) continue;
@@ -177,25 +177,37 @@ async function scrapeAndSaveComments(pbFixtureId, globoUrl) {
     }
     if (!commentText && play.description) commentText = play.description.trim();
     if (!commentText && play.title) commentText = play.title.trim();
-    if (!commentText) continue;
+    
+    if (commentText) {
+      // Verifica duplicata de comentário local antes de salvar
+      const existing = await pb.collection('fixture_comments').getFullList({
+        filter: `fixtureId = '${pbFixtureId}' && time = '${timeStr}'`
+      });
+      if (!existing.find(e => e.text === commentText)) {
+        await pb.collection('fixture_comments').create({
+          fixtureId: pbFixtureId,
+          time: timeStr,
+          period: play.period?.abbreviation || play.period?.label || '',
+          text: commentText,
+          type: play.type || 'text',
+        });
+      }
+    }
 
-    // Verifica duplicata (mesmo minuto + mesmo texto)
-    const existing = await pb.collection('fixture_comments').getFullList({
-      filter: `fixtureId = '${pbFixtureId}' && time = '${timeStr}'`
-    });
-    if (existing.find(e => e.text === commentText)) continue;
-
-    await pb.collection('fixture_comments').create({
-      fixtureId: pbFixtureId,
-      time: timeStr,
-      period: play.period?.abbreviation || play.period?.label || '',
-      text: commentText,
-      type: play.type || 'text',
-    });
-    inserted++;
+    // Capture event if it is a goal/card/sub
+    const allowedTypes = ['gol', 'card', 'subst', 'substituicao', 'cartao'];
+    if (play.type && allowedTypes.includes(play.type.toLowerCase())) {
+      events.push({
+        time: parseInt(timeStr.replace(/\D/g, ''), 10) || 0,
+        teamSide: play.team?.type === 'away' || play.team?.name === 'away' ? 'away' : 'home',
+        player: play.player?.name || play.playerIn?.name || '',
+        type: play.type.toLowerCase(),
+        detail: play.cardType || ''
+      });
+    }
   }
 
-  return inserted;
+  return events;
 }
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
@@ -219,7 +231,7 @@ async function run() {
     return;
   }
 
-  // Busca partidas FT sem comentários
+  // Busca todas as partidas
   const fixtures = await pb.collection('fixtures').getFullList({
     expand: 'homeTeamId,awayTeamId',
     filter: leagueIds.map(id => `leagueId = '${id}'`).join(' || '),
@@ -230,52 +242,121 @@ async function run() {
   const finished = fixtures.filter(f => finishedStatuses.includes(f.statusShort));
   console.log(`\n🏟️ Total de partidas finalizadas: ${finished.length}`);
 
-  // Verifica quais já têm comentários
-  const allComments = await pb.collection('fixture_comments').getFullList({});
-  const fixtureIdsWithComments = new Set(allComments.map(c => c.fixtureId));
-  
-  const missing = finished.filter(f => !fixtureIdsWithComments.has(f.id));
-  console.log(`🔍 Partidas sem comentários: ${missing.length}\n`);
-
   let successCount = 0;
   let failCount = 0;
 
-  for (let i = 0; i < missing.length; i++) {
-    const f = missing[i];
+  for (let i = 0; i < finished.length; i++) {
+    const f = finished[i];
     const homeTeam = f.expand?.homeTeamId?.[0] || f.expand?.homeTeamId;
     const awayTeam = f.expand?.awayTeamId?.[0] || f.expand?.awayTeamId;
     const homeName = homeTeam?.name || '?';
     const awayName = awayTeam?.name || '?';
     const dateStr = f.date?.substring(0, 10) || '';
 
-    console.log(`[${i + 1}/${missing.length}] ${homeName} x ${awayName} (${dateStr})`);
+    console.log(`[${i + 1}/${finished.length}] ${homeName} x ${awayName} (${dateStr})`);
 
     try {
+      const collectedSources = [];
+      let globoEvents = [];
+
+      // 1. ge.globo
       const globoUrl = await findGloboUrl(homeName, awayName, f.date);
-      if (!globoUrl) {
-        console.log('  ⚠ URL do ge.globo não encontrada. Pulando...');
-        failCount++;
-        await delay(1000);
-        continue;
+      if (globoUrl) {
+        console.log(`  🌐 URL ge.globo: ${globoUrl}`);
+        globoEvents = await scrapeAndSaveComments(f.id, globoUrl);
+        console.log(`  ✅ Processado ge.globo (${globoEvents.length} eventos extraídos)`);
+      } else {
+        console.log('  ⚠ URL do ge.globo não encontrada.');
       }
 
-      console.log(`  🌐 URL: ${globoUrl}`);
-      const inserted = await scrapeAndSaveComments(f.id, globoUrl);
-      console.log(`  ✅ ${inserted} comentários inseridos`);
-      successCount++;
+      // 2. Placar de Futebol
+      const placarLeagueSlug = f.leagueId === leagues.find(l => l.externalId === 619)?.id ? 'mineiro-modulo-2' : 'campeonato-mineiro';
+      const placarData = await fetchPlacarMatchData(homeName, awayName, f.date, placarLeagueSlug);
+      if (placarData) {
+        console.log(`  🌐 URL Placar de Futebol: ${placarData.url}`);
+        collectedSources.push(placarData);
+      }
+
+      // 3. ESPN (Somente Módulo 1)
+      if (f.leagueId === leagues.find(l => l.externalId === 629)?.id) {
+        const espnData = await fetchEspnMatchData(homeName, awayName, f.date, 'bra.camp.mineiro');
+        if (espnData) {
+          collectedSources.push(espnData);
+        }
+      }
+
+      // Consolidar dados se alguma fonte retornou resultado
+      if (collectedSources.length > 0) {
+        const mergedInfo = mergeFixtureInfo(
+          { homeGoals: f.homeGoals, awayGoals: f.awayGoals, statusShort: f.statusShort, elapsed: f.elapsed },
+          collectedSources
+        );
+
+        if (mergedInfo.homeGoals !== f.homeGoals || mergedInfo.awayGoals !== f.awayGoals) {
+          console.log(`  🛠️ Consolidado placar: ${f.homeGoals}x${f.awayGoals} -> ${mergedInfo.homeGoals}x${mergedInfo.awayGoals}`);
+          await pb.collection('fixtures').update(f.id, {
+            homeGoals: mergedInfo.homeGoals,
+            awayGoals: mergedInfo.awayGoals
+          });
+        }
+
+        // Merge e persistência de eventos
+        const allEvents = [];
+        if (globoEvents.length > 0) allEvents.push(globoEvents);
+        collectedSources.forEach(s => {
+          if (s.events && s.events.length > 0) allEvents.push(s.events);
+        });
+
+        if (allEvents.length > 0) {
+          const mergedEvents = mergeFixtureEvents(allEvents);
+          const currentEvents = await pb.collection('fixture_events').getFullList({
+            filter: `fixtureId = '${f.id}'`
+          });
+
+          for (const ev of mergedEvents) {
+            const exists = currentEvents.some(dbE => {
+              const timeDiff = Math.abs(dbE.time - ev.time);
+              const sameTime = timeDiff <= 1;
+              const sameSide = (dbE.teamId === homeTeam.externalId && ev.teamSide === 'home') || (dbE.teamId === awayTeam.externalId && ev.teamSide === 'away');
+              const sameType = dbE.type?.toLowerCase() === ev.type?.toLowerCase();
+              return sameTime && sameSide && sameType;
+            });
+
+            if (!exists) {
+              await pb.collection('fixture_events').create({
+                fixtureId: f.id,
+                time: ev.time,
+                teamId: ev.teamSide === 'home' ? homeTeam.externalId : awayTeam.externalId,
+                player: ev.player || '',
+                type: ev.type || '',
+                detail: ev.detail || '',
+                playerPhoto: '',
+                externalPlayerId: null
+              });
+              console.log(`  ➕ Adicionado evento: ${ev.time}' ${ev.type} (${ev.player})`);
+            }
+          }
+        }
+        successCount++;
+      } else {
+        if (!globoUrl) {
+          console.log('  ⚠ Nenhuma fonte de dados respondeu para esta partida. Pulando...');
+          failCount++;
+        } else {
+          successCount++;
+        }
+      }
     } catch (err) {
-      console.log(`  ❌ Erro: ${err.message}`);
+      console.log(`  ❌ Erro ao processar partida: ${err.message}`);
       failCount++;
     }
 
-    // Pausa entre requisições para não sobrecarregar o ge.globo
-    await delay(2000);
+    await delay(1500);
   }
 
   console.log(`\n🎉 Backfill concluído!`);
   console.log(`   ✅ Partidas processadas com sucesso: ${successCount}`);
-  console.log(`   ❌ Partidas com falha/sem URL: ${failCount}`);
-  console.log(`   💬 Total de comentários no banco: ${(await pb.collection('fixture_comments').getList(1, 1)).totalItems}`);
+  console.log(`   ❌ Partidas com falha/sem fonte: ${failCount}`);
 }
 
 run().catch(console.error);
