@@ -1,7 +1,9 @@
 part of '../screens.dart';
 
 class WatchContentScreen extends StatefulWidget {
-  const WatchContentScreen({super.key});
+  final VideoModel video;
+
+  const WatchContentScreen({super.key, required this.video});
 
   @override
   State<WatchContentScreen> createState() => _WatchContentScreenState();
@@ -14,24 +16,78 @@ class _WatchContentScreenState extends State<WatchContentScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Forçar orientação paisagem (Landscape) ao entrar na tela
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    
+    // Ocultar barras do sistema para tela cheia imersiva
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
     _initializePlayer();
   }
 
-  Future<void> _initializePlayer() async {
-    _videoPlayerController = VideoPlayerController.networkUrl(
-      Uri.parse("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"),
+  String? _getVideoId(String url) {
+    final regExp = RegExp(
+      r'^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*',
+      caseSensitive: false,
     );
+    final match = regExp.firstMatch(url);
+    return (match != null && match.group(7)?.length == 11) ? match.group(7) : null;
+  }
+
+  Future<void> _initializePlayer() async {
+    final videoId = _getVideoId(widget.video.url);
+    if (videoId == null) {
+      print("ID do vídeo inválido para URL: ${widget.video.url}");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('URL de vídeo inválida.')),
+        );
+        Navigator.of(context).pop();
+      }
+      return;
+    }
+
+    final yt = YoutubeExplode();
     try {
+      // Obter o manifesto dos streams do YouTube
+      final manifest = await yt.videos.streams.getManifest(videoId);
+      
+      // Obter o stream muxado (áudio + vídeo) com melhor qualidade
+      final streamInfo = manifest.muxed.withHighestVideoQuality();
+      
+      _videoPlayerController = VideoPlayerController.networkUrl(streamInfo.url);
       await _videoPlayerController.initialize();
+      
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
-        autoPlay: false,
+        autoPlay: true,
         looping: false,
-        aspectRatio: 16 / 9,
+        fullScreenByDefault: true,
+        allowedScreenOrientations: [
+          Orientation.landscapeLeft,
+          Orientation.landscapeRight,
+        ],
+        showControlsOnInitialize: true,
+        placeholder: const Center(
+          child: CircularProgressIndicator(color: AppColor.primary),
+        ),
       );
     } catch (e) {
-      print("Erro ao inicializar player: $e");
+      print("Erro ao carregar transmissão do YouTube: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível carregar o vídeo.')),
+        );
+        Navigator.of(context).pop();
+      }
+    } finally {
+      yt.close();
     }
+    
     if (mounted) {
       setState(() {});
     }
@@ -41,94 +97,49 @@ class _WatchContentScreenState extends State<WatchContentScreen> {
   void dispose() {
     _videoPlayerController.dispose();
     _chewieController?.dispose();
+    
+    // Restaurar orientação para retrato (Portrait) ao sair da tela
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
+    
+    // Restaurar as barras do sistema
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isInitialized = _chewieController != null &&
+        _chewieController!.videoPlayerController.value.isInitialized;
+
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: SvgPicture.asset(Assets.share),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: SvgPicture.asset(Assets.more),
-          ),
-        ],
-      ),
-      body: Column(
+      backgroundColor: Colors.black,
+      body: Stack(
         children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: _chewieController != null &&
-                    _chewieController!.videoPlayerController.value.isInitialized
+          Center(
+            child: isInitialized
                 ? Chewie(
                     controller: _chewieController!,
                   )
-                : const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                : const CircularProgressIndicator(color: AppColor.primary),
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              children: [
-                const Gap(10),
-                Text(
-                  'Ronaldo denies mega-money AL Nassr deal is signed and sealed',
-                  style: context.textTheme.bodyLarge,
+          Positioned(
+            top: 20,
+            left: 20,
+            child: SafeArea(
+              child: ClipOval(
+                child: Material(
+                  color: Colors.black.withOpacity(0.6),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
                 ),
-                const Gap(10),
-                Row(
-                  children: [
-                    Text(
-                      '125k views - 10 hours ago',
-                      style:
-                          context.textTheme.labelSmall!.copyWith(fontSize: 13),
-                    ),
-                    const Gap(10),
-                  ],
-                ),
-                const Gap(5),
-                const Row(
-                  children: [
-                    Text(
-                      '#football',
-                      style: TextStyle(fontSize: 13, color: AppColor.primary),
-                    ),
-                    Gap(5),
-                    Text(
-                      '#worldcup',
-                      style: TextStyle(fontSize: 13, color: AppColor.primary),
-                    ),
-                    Gap(5),
-                    Text(
-                      '#cristianoronaldo',
-                      style: TextStyle(fontSize: 13, color: AppColor.primary),
-                    ),
-                  ],
-                ),
-                const Divider(height: 35),
-                Text(
-                  'Related News',
-                  style: context.textTheme.bodyMedium,
-                ),
-                const Gap(10),
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const ScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  itemBuilder: (_, i) {
-                    return const CardNewsItem();
-                  },
-                  separatorBuilder: (_, i) => const Gap(15),
-                  itemCount: 5,
-                ),
-                const Gap(90),
-              ],
+              ),
             ),
           ),
         ],

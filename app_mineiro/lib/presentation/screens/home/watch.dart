@@ -147,34 +147,8 @@ class _VideoCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       child: InkWell(
-        onTap: () async {
-          String urlString = video.url;
-          final regExp = RegExp(
-            r'^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*',
-            caseSensitive: false,
-          );
-          final match = regExp.firstMatch(urlString);
-          if (match != null && match.group(7)?.length == 11) {
-            final videoId = match.group(7);
-            urlString = 'https://www.youtube.com/embed/$videoId?autoplay=1';
-          }
-
-          final url = Uri.parse(urlString);
-          try {
-            await launchUrl(url, mode: LaunchMode.inAppBrowserView);
-          } catch (e) {
-            print("Erro ao abrir URL com inAppBrowserView: $e");
-            try {
-              await launchUrl(url, mode: LaunchMode.externalApplication);
-            } catch (err) {
-              print("Erro ao abrir URL com externalApplication: $err");
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Não foi possível abrir o link do vídeo.')),
-                );
-              }
-            }
-          }
+        onTap: () {
+          context.pushNamed(screenWatchContent, extra: video);
         },
         borderRadius: BorderRadius.circular(15),
         child: Ink(

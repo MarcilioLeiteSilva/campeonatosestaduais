@@ -29,6 +29,8 @@ import 'package:app_mineiro/api/scorers_api.dart';
 import 'package:app_mineiro/api/videos_api.dart';
 import 'package:app_mineiro/models/video.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'package:flutter/services.dart';
 import 'package:app_mineiro/models/scorers.dart';
 import 'package:app_mineiro/helpers/squads.dart';
 import 'package:app_mineiro/models/fixture_lineup.dart';
