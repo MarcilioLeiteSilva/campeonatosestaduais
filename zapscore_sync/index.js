@@ -6,6 +6,7 @@ import { getMessaging } from 'firebase-admin/messaging';
 import fs from 'fs';
 import vm from 'vm';
 import { fetchPlacarMatchData, fetchFIMatchData, fetchEspnMatchData, mergeFixtureInfo, mergeFixtureEvents } from './helpers.js';
+import { syncVideos } from './sync_videos.js';
 
 dotenv.config();
 
@@ -199,6 +200,19 @@ async function ensureCollectionsExist() {
         { name: 'text', type: 'text', required: true },
         { name: 'type', type: 'text' }
       ]
+    },
+    {
+      name: 'videos',
+      type: 'base',
+      schema: [
+        { name: 'title', type: 'text', required: true },
+        { name: 'url', type: 'text', required: true, unique: true },
+        { name: 'thumbnail', type: 'text' },
+        { name: 'date', type: 'text' },
+        { name: 'leagueId', type: 'text', required: true },
+        { name: 'fixtureId', type: 'text' },
+        { name: 'channelName', type: 'text' }
+      ]
     }
   ];
 
@@ -213,6 +227,7 @@ async function ensureCollectionsExist() {
           name: col.name,
           type: col.type,
           schema: col.schema,
+          fields: col.schema,
           listRule: "",
           viewRule: "",
           createRule: null,
@@ -450,6 +465,7 @@ async function syncFixtures(leagueId, season = 2026, isLiveWindow = false) {
       const now = new Date();
       const diffMs = now - matchDate;
       const diffHours = diffMs / (1000 * 60 * 60);
+      const isRecentOrLive = diffHours >= -4 && diffHours <= 24;
          // Integração multi-fonte para Campeonato Mineiro (Módulo 1 e 2)
       const isMineiroLeague = [629, 619].includes(leagueId) || [629, 619].includes(f.leagueId);
       
@@ -1510,6 +1526,9 @@ async function runSyncCycle(isLiveWindow) {
 
     // Dados dinâmicos: sempre, passando flag de janela ao vivo para controle de notificações
     await syncDynamicData(isLiveWindow);
+
+    // Sincroniza vídeos do Campeonato Mineiro Módulo 1 e 2 do YouTube
+    await syncVideos(pb);
 
     console.log('✅ Ciclo de sincronização concluído com sucesso!\n');
   } catch (error) {

@@ -3,6 +3,7 @@ import 'package:app_mineiro/api/clubs_api.dart';
 import 'package:app_mineiro/api/events_api.dart';
 import 'package:app_mineiro/api/news_api.dart';
 import 'package:app_mineiro/api/scorers_api.dart';
+import 'package:app_mineiro/api/videos_api.dart';
 
 class DataLoader {
   static Future<void> loadAllData() async {
@@ -15,6 +16,7 @@ class DataLoader {
         EventsApi.loadFromPocketBase(),
         NewsApi.loadFromPocketBase(),
         ScorersApi.loadFromPocketBase(),
+        VideosApi.loadFromPocketBase(),
       ]);
       print("Todos os dados do PocketBase foram carregados com sucesso!");
     } catch (e) {
