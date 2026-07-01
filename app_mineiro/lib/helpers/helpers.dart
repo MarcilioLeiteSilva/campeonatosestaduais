@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:app_mineiro/models/events.dart';
 import 'package:app_mineiro/models/leagues.dart';
 import 'package:app_mineiro/models/fixture_event.dart';
+import 'package:app_mineiro/models/video.dart';
 
 import '../presentation/screens/screens.dart';
 

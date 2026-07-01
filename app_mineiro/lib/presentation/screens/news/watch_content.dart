@@ -56,8 +56,9 @@ class _WatchContentScreenState extends State<WatchContentScreen> {
       // Obter o manifesto dos streams do YouTube
       final manifest = await yt.videos.streams.getManifest(videoId);
       
-      // Obter o stream muxado (áudio + vídeo) com melhor qualidade
-      final streamInfo = manifest.muxed.withHighestVideoQuality();
+      // Obter o stream muxado (áudio + vídeo) com melhor qualidade (maior tamanho de arquivo)
+      final streamInfo = manifest.muxed.reduce((curr, next) => 
+          curr.size.totalBytes > next.size.totalBytes ? curr : next);
       
       _videoPlayerController = VideoPlayerController.networkUrl(streamInfo.url);
       await _videoPlayerController.initialize();
@@ -67,10 +68,6 @@ class _WatchContentScreenState extends State<WatchContentScreen> {
         autoPlay: true,
         looping: false,
         fullScreenByDefault: true,
-        allowedScreenOrientations: [
-          Orientation.landscapeLeft,
-          Orientation.landscapeRight,
-        ],
         showControlsOnInitialize: true,
         placeholder: const Center(
           child: CircularProgressIndicator(color: AppColor.primary),
