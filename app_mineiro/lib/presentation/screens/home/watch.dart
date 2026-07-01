@@ -161,12 +161,19 @@ class _VideoCard extends StatelessWidget {
 
           final url = Uri.parse(urlString);
           try {
-            await launchUrl(url, mode: LaunchMode.externalApplication);
+            await launchUrl(url, mode: LaunchMode.inAppBrowserView);
           } catch (e) {
-            print("Erro ao abrir URL: $e");
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Não foi possível abrir o link do vídeo.')),
-            );
+            print("Erro ao abrir URL com inAppBrowserView: $e");
+            try {
+              await launchUrl(url, mode: LaunchMode.externalApplication);
+            } catch (err) {
+              print("Erro ao abrir URL com externalApplication: $err");
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Não foi possível abrir o link do vídeo.')),
+                );
+              }
+            }
           }
         },
         borderRadius: BorderRadius.circular(15),

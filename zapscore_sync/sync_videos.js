@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// Canais oficiais e parceiros que transmitem o Campeonato Mineiro
+// Canais oficiais e parceiros que transmitem o Campeonato Mineiro (para conteúdos gerais)
 const YOUTUBE_CHANNELS = [
   { name: 'FMF TV', id: 'UC3A-kV77_Q9vSsLmgNO2m9Q' }, // Canal FMF Oficial
   { name: 'Lance! Esporte', id: 'UC4j3XkBc2WYNHjLResS5usQ' }, // Lance! TV
@@ -20,6 +20,11 @@ function normalizeString(str) {
     .replace(/[^\w\s]/g, '')
     .trim();
 }
+
+/**
+ * Helper para pausar execução (evitar limites de requisição)
+ */
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Faz o parsing básico do XML do feed RSS do YouTube
@@ -50,11 +55,106 @@ function parseYoutubeRss(xmlText) {
 }
 
 /**
+ * Realiza uma busca no YouTube por melhores momentos de uma partida específica
+ */
+async function searchFixtureVideo(pb, fixture) {
+  const homeTeam = fixture.expand.homeTeamId;
+  const awayTeam = fixture.expand.awayTeamId;
+  const league = fixture.expand.leagueId;
+  
+  if (!homeTeam || !awayTeam || !league) return null;
+  
+  const isModulo2 = league.externalId === 619;
+  const leagueTerm = isModulo2 ? 'modulo ii' : 'modulo i';
+  const query = `${homeTeam.name} x ${awayTeam.name} melhores momentos campeonato mineiro ${leagueTerm} 2026`;
+  
+  const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+  
+  try {
+    const response = await axios.get(url, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache'
+      }
+    });
+
+    const html = response.data;
+    const regex = /var ytInitialData = ({[\s\S]*?});/;
+    const match = html.match(regex);
+    if (!match) return null;
+
+    const data = JSON.parse(match[1]);
+    const contents = data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+    if (!contents) return null;
+
+    const normHome = normalizeString(homeTeam.name);
+    const normAway = normalizeString(awayTeam.name);
+
+    for (const content of contents) {
+      const itemSection = content.itemSectionRenderer;
+      if (!itemSection || !itemSection.contents) continue;
+      
+      for (const item of itemSection.contents) {
+        const videoRenderer = item.videoRenderer;
+        if (!videoRenderer) continue;
+        
+        const videoId = videoRenderer.videoId;
+        const title = videoRenderer.title?.runs?.[0]?.text;
+        const thumbnail = videoRenderer.thumbnail?.thumbnails?.[0]?.url;
+        const channelName = videoRenderer.ownerText?.runs?.[0]?.text || 'YouTube';
+        
+        if (videoId && title) {
+          const normTitle = normalizeString(title);
+          
+          // Excluir se for de outra competição (como Brasileirão Série D, Copa do Brasil, etc.)
+          const isOtherCompetition = normTitle.includes('brasileirao') ||
+                                     normTitle.includes('serie a') ||
+                                     normTitle.includes('serie b') ||
+                                     normTitle.includes('serie c') ||
+                                     normTitle.includes('serie d') ||
+                                     normTitle.includes('copa do brasil') ||
+                                     normTitle.includes('sulamericana') ||
+                                     normTitle.includes('libertadores');
+
+          if (isOtherCompetition) continue;
+
+          // Verificação de relevância: o título deve conter os nomes de ambos os times
+          // OU conter pelo menos um time e palavras-chave do campeonato mineiro
+          const containsHome = normTitle.includes(normHome);
+          const containsAway = normTitle.includes(normAway);
+          const containsMineiroOrModulo = normTitle.includes('mineiro') || normTitle.includes('modulo');
+
+          const isRelevant = (containsHome && containsAway) || 
+                             ((containsHome || containsAway) && containsMineiroOrModulo);
+
+          if (isRelevant) {
+            return {
+              title,
+              url: `https://www.youtube.com/watch?v=${videoId}`,
+              thumbnail: thumbnail || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+              date: fixture.date || new Date().toISOString(), // Usar data da partida
+              leagueId: league.externalId.toString(),
+              fixtureId: fixture.id,
+              channelName
+            };
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`❌ Erro ao buscar vídeo para ${homeTeam.name} x ${awayTeam.name}:`, err.message);
+  }
+  return null;
+}
+
+/**
  * Função principal para sincronizar vídeos do YouTube no Pocketbase
  * @param {PocketBase} pb - Instância autenticada do PocketBase
  */
 export async function syncVideos(pb) {
-  console.log('🎬 Iniciando sincronização de vídeos do Campeonato Mineiro...');
+  console.log('🎬 Iniciando sincronização inteligente de vídeos...');
   try {
     // 0. Limpar vídeos de outras competições cadastrados incorretamente (como Brasileirão Série D)
     console.log('🧹 Limpando vídeos antigos de outras competições (Brasileirão, Série D, etc.)...');
@@ -93,36 +193,72 @@ export async function syncVideos(pb) {
       return;
     }
 
-    // 2. Carregar todas as partidas para mapear times e associar fixtures aos vídeos
+    // Mapeamento de ID externo para ID Pocketbase
+    const leagueMap = {
+      '629': compModulo1.id,
+      '619': compModulo2.id
+    };
+
+    // 2. Carregar todas as partidas finalizadas para buscar vídeos delas
     const fixtures = await pb.collection('fixtures').getFullList({
       expand: 'homeTeamId,awayTeamId,leagueId',
+      filter: "statusShort = 'FT' || statusShort = 'AET' || statusShort = 'PEN' || statusShort = 'LIVE'",
       sort: '-date'
     });
 
-    // Criar um mapeamento de times para a liga correspondente com base nas partidas
-    const teamLeagueMap = {}; // { 'nome_do_time_normalizado': '629' | '619' }
-    const teamIdMap = {}; // { 'nome_do_time_normalizado': pbTeamId }
-    
-    for (const f of fixtures) {
-      const homeTeam = f.expand.homeTeamId;
-      const awayTeam = f.expand.awayTeamId;
-      const league = f.expand.leagueId;
+    console.log(`⚽ Encontradas ${fixtures.length} partidas finalizadas ou ao vivo para verificação.`);
 
-      if (!homeTeam || !awayTeam || !league) continue;
+    // 3. Obter os IDs de partidas que já possuem vídeos no banco
+    const existingVideos = await pb.collection('videos').getFullList();
+    const fixturesWithVideo = new Set(existingVideos.map(v => v.fixtureId).filter(id => id));
 
-      const leagueIdStr = league.externalId.toString(); // "629" ou "619"
+    // Filtrar partidas que ainda não possuem vídeos vinculados
+    const fixturesPendingVideo = fixtures.filter(f => !fixturesWithVideo.has(f.id));
+    console.log(`🔍 Partidas sem vídeo vinculado: ${fixturesPendingVideo.length}`);
 
-      const normHome = normalizeString(homeTeam.name);
-      const normAway = normalizeString(awayTeam.name);
+    // Limite de buscas por execução para evitar rate limit do YouTube
+    const SEARCH_LIMIT = 15;
+    let searchCount = 0;
+    let addedCount = 0;
 
-      teamLeagueMap[normHome] = leagueIdStr;
-      teamLeagueMap[normAway] = leagueIdStr;
+    for (const fixture of fixturesPendingVideo) {
+      if (searchCount >= SEARCH_LIMIT) {
+        console.log(`⏳ Limite de ${SEARCH_LIMIT} buscas atingido nesta rodada. O restante será processado no próximo ciclo.`);
+        break;
+      }
+
+      const home = fixture.expand.homeTeamId?.name;
+      const away = fixture.expand.awayTeamId?.name;
+      console.log(`📡 Buscando melhores momentos no YouTube: ${home} x ${away}...`);
       
-      teamIdMap[normHome] = homeTeam.id;
-      teamIdMap[normAway] = awayTeam.id;
+      searchCount++;
+      const videoResult = await searchFixtureVideo(pb, fixture);
+      
+      if (videoResult) {
+        try {
+          // Salvar o vídeo na coleção
+          await pb.collection('videos').create({
+            title: videoResult.title,
+            url: videoResult.url,
+            thumbnail: videoResult.thumbnail,
+            date: videoResult.date,
+            leagueId: videoResult.leagueId,
+            fixtureId: videoResult.fixtureId,
+            channelName: videoResult.channelName
+          });
+          addedCount++;
+          console.log(`🆕 Vídeo associado e cadastrado: "${videoResult.title}"`);
+        } catch (saveErr) {
+          console.error(`❌ Erro ao salvar vídeo da partida:`, saveErr.message);
+        }
+      }
+
+      // Delay de cortesia entre buscas do YouTube
+      await delay(1500);
     }
 
-    // 3. Buscar os feeds RSS de cada canal do YouTube
+    // 4. Buscar os feeds RSS gerais como fonte secundária (para rodadas, lives gerais, etc.)
+    console.log('📡 Coletando conteúdos adicionais nos feeds RSS oficiais...');
     const allFetchedVideos = [];
     for (const channel of YOUTUBE_CHANNELS) {
       try {
@@ -137,22 +273,30 @@ export async function syncVideos(pb) {
           }
         });
         const channelVideos = parseYoutubeRss(response.data);
-        console.log(`📹 Encontrados ${channelVideos.length} vídeos no feed.`);
         allFetchedVideos.push(...channelVideos);
       } catch (err) {
         console.error(`❌ Erro ao buscar feed do canal ${channel.name}:`, err.message);
       }
     }
 
-    console.log(`🔍 Processando total de ${allFetchedVideos.length} vídeos...`);
+    // Mapeamento dos nomes de times para catalogar feeds RSS gerais
+    const teamLeagueMap = {};
+    for (const f of fixtures) {
+      const homeTeam = f.expand.homeTeamId;
+      const awayTeam = f.expand.awayTeamId;
+      const league = f.expand.leagueId;
+      if (!homeTeam || !awayTeam || !league) continue;
 
-    let addedCount = 0;
-    let updatedCount = 0;
+      const leagueIdStr = league.externalId.toString();
+      teamLeagueMap[normalizeString(homeTeam.name)] = leagueIdStr;
+      teamLeagueMap[normalizeString(awayTeam.name)] = leagueIdStr;
+    }
 
+    let feedAddedCount = 0;
     for (const video of allFetchedVideos) {
       const normTitle = normalizeString(video.title);
 
-      // Excluir se for de outra competição (como Brasileirão Série D, Série B, Copa do Brasil, etc.)
+      // Ignorar se for de outra liga
       const isOtherCompetition = normTitle.includes('brasileirao') ||
                                  normTitle.includes('serie a') ||
                                  normTitle.includes('serie b') ||
@@ -162,113 +306,57 @@ export async function syncVideos(pb) {
                                  normTitle.includes('sulamericana') ||
                                  normTitle.includes('libertadores');
 
-      // Critério básico de relevância: o título deve mencionar o campeonato ou os times
-      const isMineiroMatch = (normTitle.includes('mineiro') || 
-                              normTitle.includes('modulo') || 
-                              normTitle.includes('fmf') ||
-                              Object.keys(teamLeagueMap).some(teamName => normTitle.includes(teamName))) &&
-                             !isOtherCompetition;
+      if (isOtherCompetition) continue;
 
-      if (!isMineiroMatch) {
-        // Ignorar vídeos não relacionados ao Campeonato Mineiro
-        continue;
-      }
+      const isMineiroMatch = normTitle.includes('mineiro') || 
+                             normTitle.includes('modulo') || 
+                             normTitle.includes('fmf') ||
+                             Object.keys(teamLeagueMap).some(teamName => normTitle.includes(teamName));
 
-      // 4. Classificar a liga (Módulo 1 vs Módulo 2)
-      let leagueId = null;
+      if (!isMineiroMatch) continue;
 
-      // Prioridade 1: indicação explícita no título
-      if (normTitle.includes('modulo i ') || normTitle.includes('modulo 1') || normTitle.includes('primeira divisao')) {
-        leagueId = '629';
-      } else if (normTitle.includes('modulo ii') || normTitle.includes('modulo 2') || normTitle.includes('segunda divisao')) {
+      // Classificar liga
+      let leagueId = '629'; // Default Módulo 1
+      if (normTitle.includes('modulo ii') || normTitle.includes('modulo 2')) {
         leagueId = '619';
+      } else if (normTitle.includes('modulo i ') || normTitle.includes('modulo 1')) {
+        leagueId = '629';
       } else {
-        // Prioridade 2: verificar os times envolvidos no título
-        let m1Score = 0;
-        let m2Score = 0;
-
+        // Pelo nome do time
         for (const [teamName, leagueIdStr] of Object.entries(teamLeagueMap)) {
           if (normTitle.includes(teamName)) {
-            if (leagueIdStr === '629') m1Score++;
-            if (leagueIdStr === '619') m2Score++;
+            leagueId = leagueIdStr;
+            break;
           }
         }
-
-        if (m1Score > m2Score) {
-          leagueId = '629';
-        } else if (m2Score > m1Score) {
-          leagueId = '619';
-        } else if (m1Score > 0 && m1Score === m2Score) {
-          // Empate ou menções mistas (ex: amistoso, notícias gerais)
-          leagueId = '629'; // Default Módulo 1
-        }
       }
 
-      // Se não conseguimos determinar, assumimos Módulo 1 como padrão se for relacionado ao campeonato
-      if (!leagueId) {
-        leagueId = '629';
-      }
-
-      // 5. Tentar encontrar se o vídeo corresponde a uma partida (fixture) específica
-      let matchedFixtureId = '';
-      let bestMatchScore = 0;
-
-      for (const f of fixtures) {
-        const homeTeam = f.expand.homeTeamId;
-        const awayTeam = f.expand.awayTeamId;
-        if (!homeTeam || !awayTeam) continue;
-
-        const normHome = normalizeString(homeTeam.name);
-        const normAway = normalizeString(awayTeam.name);
-
-        let matchScore = 0;
-        // Se ambos os times estão no título do vídeo, é um match perfeito!
-        if (normTitle.includes(normHome) && normTitle.includes(normAway)) {
-          matchScore = 3;
-        } else if (normTitle.includes(normHome) || normTitle.includes(normAway)) {
-          // Apenas um time é mencionado
-          matchScore = 1;
-        }
-
-        if (matchScore > bestMatchScore) {
-          bestMatchScore = matchScore;
-          matchedFixtureId = f.id;
-        }
-      }
-
-      // 6. Salvar ou atualizar no Pocketbase
-      const videoData = {
-        title: video.title,
-        url: video.url,
-        thumbnail: video.thumbnail,
-        date: video.date,
-        leagueId: leagueId,
-        fixtureId: matchedFixtureId || null,
-        channelName: video.channelName
-      };
-
+      // Salvar apenas se o URL for inédito
       try {
         let existingRecord = null;
         try {
           existingRecord = await pb.collection('videos').getFirstListItem(`url = "${video.url}"`);
-        } catch (e) {
-          // Registro não existe
-        }
+        } catch (e) {}
 
-        if (existingRecord) {
-          await pb.collection('videos').update(existingRecord.id, videoData);
-          updatedCount++;
-        } else {
-          await pb.collection('videos').create(videoData);
-          addedCount++;
-          console.log(`🆕 Novo vídeo adicionado: "${video.title}" (Liga: ${leagueId})`);
+        if (!existingRecord) {
+          await pb.collection('videos').create({
+            title: video.title,
+            url: video.url,
+            thumbnail: video.thumbnail,
+            date: video.date,
+            leagueId: leagueId,
+            fixtureId: null, // Sem partida específica vinculada pelo RSS geral
+            channelName: video.channelName
+          });
+          feedAddedCount++;
+          console.log(`🆕 Vídeo de feed adicionado: "${video.title}" (Liga: ${leagueId})`);
         }
       } catch (dbErr) {
-        console.error(`❌ Erro ao salvar vídeo no Pocketbase [${video.title}]:`, dbErr.message);
+        console.error(`❌ Erro ao salvar vídeo RSS [${video.title}]:`, dbErr.message);
       }
     }
 
-    console.log(`📊 Sincronização concluída: ${addedCount} criados, ${updatedCount} atualizados.`);
+    console.log(`📊 Sincronização inteligente concluída: ${addedCount} de partidas e ${feedAddedCount} de feeds cadastrados.`);
   } catch (err) {
     console.error('❌ Falha geral na sincronização de vídeos:', err.message);
   }
