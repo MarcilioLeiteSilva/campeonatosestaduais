@@ -148,7 +148,18 @@ class _VideoCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 15),
       child: InkWell(
         onTap: () async {
-          final url = Uri.parse(video.url);
+          String urlString = video.url;
+          final regExp = RegExp(
+            r'^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*',
+            caseSensitive: false,
+          );
+          final match = regExp.firstMatch(urlString);
+          if (match != null && match.group(7)?.length == 11) {
+            final videoId = match.group(7);
+            urlString = 'https://www.youtube.com/embed/$videoId?autoplay=1';
+          }
+
+          final url = Uri.parse(urlString);
           try {
             await launchUrl(url, mode: LaunchMode.externalApplication);
           } catch (e) {
